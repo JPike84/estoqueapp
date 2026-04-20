@@ -372,7 +372,7 @@ function setSyncStatus(status,msg){
   const m=document.getElementById('sync-msg');
   bar.classList.add('show');
   dot.className='dot';
-  if(status==='ok'){dot.classList.add('');m.textContent=msg||'Conectado';}
+  if(status==='ok'){m.textContent=msg||'Conectado';}
   else if(status==='syncing'){dot.classList.add('syncing');m.textContent=msg||'Sincronizando...';}
   else if(status==='error'){dot.classList.add('error');m.textContent=msg||'Erro de conexão';}
 }
