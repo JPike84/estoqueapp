@@ -378,7 +378,7 @@ function setSyncStatus(status,msg){
 }
 
 // ===== DB SUPABASE =====
-async function sbGetAll(table,order='id'){
+async function sbGetAll(table,order='created_at'){
   const{data,error}=await sb.from(table).select('*').order(order,{ascending:true});
   if(error)throw error;
   return data||[];
@@ -431,7 +431,7 @@ function showPage(id){
 async function renderHome(){
   try{
     setSyncStatus('syncing','Carregando...');
-    const[prods,conts,itens]=await Promise.all([sbGetAll('produtos'),sbGetAll('contagens'),sbGetAll('itens')]);
+    const[prods,conts,itens]=await Promise.all([sbGetAll('produtos','nome'),sbGetAll('contagens','id'),sbGetAll('itens','ts')]);
     setSyncStatus('ok','Conectado');
     document.getElementById('stats-home').innerHTML=`
       <div class="stat-card"><div class="stat-val">${prods.length}</div><div class="stat-lbl">Produtos</div></div>
