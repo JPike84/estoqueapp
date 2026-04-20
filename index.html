@@ -722,26 +722,26 @@ async function gerarConsolidado(){
 }
 async function exportarConsolidadoCSV(){
   const rows=await getConsolidadoData();if(!rows.length){alert('Sem dados.');return;}
-  downloadCSV('cod,qtd,data\n'+rows.map(r=>`${r.sem_ean?'':r.ean},${r.qtdAcum},${new Date(r.ts).toLocaleDateString('pt-BR')}`).join('\n'),'estoque_'+fmtDate(new Date()));
+  downloadCSV('cod;qtd;data\n'+rows.map(r=>`${r.sem_ean?'':r.ean};${r.qtdAcum};${new Date(r.ts).toLocaleDateString('pt-BR')}`).join('\n'),'estoque_'+fmtDate(new Date()));
 }
 async function exportarValidadeCSV(){
   const rows=await getConsolidadoData();if(!rows.length){alert('Sem dados.');return;}
-  let csv='nome,ean,validade,qtd\n';
-  rows.forEach(r=>{const v=[...new Set(r.validades)];const e=r.sem_ean?'':r.ean;(v.length?v:['N/A']).forEach(x=>{csv+=`"${r.nome||''}",${e},${x},${r.qtdAcum}\n`;});});
+  let csv='nome;ean;validade;qtd\n';
+  rows.forEach(r=>{const v=[...new Set(r.validades)];const e=r.sem_ean?'':r.ean;(v.length?v:['N/A']).forEach(x=>{csv+=`${r.nome||''};${e};${x};${r.qtdAcum}\n`;});});
   downloadCSV(csv,'validades_'+fmtDate(new Date()));
 }
 async function exportarCSVContagem(){
   if(!contagemDetalheId)return;
   const itens=await sbGetByFK('itens','contagem_id',contagemDetalheId);
   const g={};itens.forEach(i=>{if(!g[i.ean])g[i.ean]={...i,qtd:0};g[i.ean].qtd+=i.qtd;});
-  downloadCSV('cod,qtd,data\n'+Object.values(g).map(r=>`${r.sem_ean?'':r.ean},${r.qtd},${new Date(r.ts).toLocaleDateString('pt-BR')}`).join('\n'),'estoque_'+fmtDate(new Date()));
+  downloadCSV('cod;qtd;data\n'+Object.values(g).map(r=>`${r.sem_ean?'':r.ean};${r.qtd};${new Date(r.ts).toLocaleDateString('pt-BR')}`).join('\n'),'estoque_'+fmtDate(new Date()));
 }
 async function exportarCSVValidade(){
   if(!contagemDetalheId)return;
   const itens=await sbGetByFK('itens','contagem_id',contagemDetalheId);
   const g={};itens.forEach(i=>{if(!g[i.ean])g[i.ean]={...i,qtd:0,validades:[]};g[i.ean].qtd+=i.qtd;if(i.validade)g[i.ean].validades.push(i.validade);});
-  let csv='nome,ean,validade,qtd\n';
-  Object.values(g).forEach(r=>{const v=[...new Set(r.validades)];const e=r.sem_ean?'':r.ean;(v.length?v:['N/A']).forEach(x=>{csv+=`"${r.nome||''}",${e},${x},${r.qtd}\n`;});});
+  let csv='nome;ean;validade;qtd\n';
+  Object.values(g).forEach(r=>{const v=[...new Set(r.validades)];const e=r.sem_ean?'':r.ean;(v.length?v:['N/A']).forEach(x=>{csv+=`${r.nome||''};${e};${x};${r.qtd}\n`;});});
   downloadCSV(csv,'validades_'+fmtDate(new Date()));
 }
 
