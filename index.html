@@ -697,22 +697,56 @@ async function deletarProduto(ean){if(!confirm('Remover?'))return;await dbDelete
 let csvData=[];
 function previewCSV(){
   const file=document.getElementById('csv-file').files[0];if(!file)return;
+  // tenta latin-1 primeiro (formato do sistema), fallback UTF-8
+  const tryParse=(text)=>{
+    const lines=text.trim().split(/\r?\n/);if(lines.length<2)return null;
+    // detecta separador: ponto e vírgula ou vírgula
+    const sep=lines[0].includes(';')?';':',';
+    const h=lines[0].split(sep).map(x=>x.trim().toLowerCase().replace(/"/g,'').replace(/\s+/g,' '));
+    // aceita variações: 'ean','código','cod', 'nome','descricao', 'id','código interno'
+    const ei=h.findIndex(x=>x.startsWith('ean')||x==='cod'||x.startsWith('c\u00f3d'));
+    const ni=h.findIndex(x=>x.startsWith('nome')||x.startsWith('descri'));
+    const ii=h.findIndex(x=>x==='id'||x.startsWith('id '));
+    const qi=h.findIndex(x=>x.startsWith('qtd')||x.startsWith('quant'));
+    if(ni<0&&ei<0)return null;
+    const data=[];
+    for(let i=1;i<lines.length;i++){
+      const raw=lines[i].trim();if(!raw)continue;
+      const c=raw.split(sep).map(x=>x.trim().replace(/^"|"$/g,''));
+      let eanVal=ei>=0?c[ei]||'':'';
+      const nomeVal=ni>=0?c[ni]||'':'';
+      const idVal=ii>=0?c[ii]||'':'';
+      const qtdVal=qi>=0?parseInt(c[qi])||0:0;
+      // trata "Sem Código" e similares como sem EAN
+      const semCodigo=!eanVal||eanVal.toLowerCase().includes('sem')||eanVal.toLowerCase().includes('s/c');
+      if(semCodigo)eanVal='';
+      const nome=nomeVal||eanVal;if(!nome&&!eanVal)continue;
+      const ean=eanVal||gerarEanInterno(nome||idVal||String(i));
+      data.push({ean,nome,idExterno:idVal,qtdRef:qtdVal});
+    }
+    return data;
+  };
   const reader=new FileReader();
   reader.onload=e=>{
-    const lines=e.target.result.trim().split('\n');if(!lines.length)return;
-    const h=lines[0].split(',').map(x=>x.trim().toLowerCase().replace(/"/g,''));
-    const[ei,ni,ii,qi]=[h.indexOf('ean'),h.indexOf('nome'),h.indexOf('id'),h.indexOf('qtd')];
-    if(ni<0){showAlert('csv-alert','CSV precisa da coluna "nome".','error');return;}
-    csvData=[];
-    for(let i=1;i<lines.length;i++){
-      const c=lines[i].split(',').map(x=>x.trim().replace(/"/g,''));
-      const nome=c[ni]||'';if(!nome)continue;
-      csvData.push({ean:(ei>=0&&c[ei])?c[ei]:gerarEanInterno(nome),nome,idExterno:ii>=0?c[ii]||'':'',qtdRef:qi>=0?parseInt(c[qi])||0:0});
+    let result=tryParse(e.target.result);
+    if(!result||result.length===0){
+      // tenta re-ler como latin-1
+      const r2=new FileReader();
+      r2.onload=e2=>{
+        result=tryParse(e2.target.result);
+        if(!result||result.length===0){showAlert('csv-alert','Não foi possível ler o CSV. Verifique o formato.','error');return;}
+        csvData=result;mostrarPreview();
+      };
+      r2.readAsText(file,'latin-1');
+      return;
     }
-    document.getElementById('csv-preview').innerHTML=`<div class="alert alert-info">${csvData.length} produto(s) encontrado(s).</div><table class="tbl"><thead><tr><th>EAN</th><th>Nome</th></tr></thead><tbody>${csvData.slice(0,5).map(r=>`<tr><td style="font-size:11px">${r.ean.startsWith('SEM-EAN-')?'<span class="sem-ean-tag">sem EAN</span>':r.ean}</td><td>${r.nome}</td></tr>`).join('')}</tbody></table>${csvData.length>5?`<div class="text-muted" style="padding:.5rem">...e mais ${csvData.length-5}</div>`:''}`;
-    document.getElementById('csv-import-btn-wrap').style.display='block';
+    csvData=result;mostrarPreview();
   };
-  reader.readAsText(file,'UTF-8');
+  reader.readAsText(file,'latin-1');
+}
+function mostrarPreview(){
+  document.getElementById('csv-preview').innerHTML=`<div class="alert alert-info">${csvData.length} produto(s) encontrado(s).</div><table class="tbl"><thead><tr><th>EAN</th><th>Nome</th><th>ID</th></tr></thead><tbody>${csvData.slice(0,8).map(r=>`<tr><td style="font-size:11px">${r.ean.startsWith('SEM-EAN-')?'<span class="sem-ean-tag">sem EAN</span>':r.ean}</td><td>${r.nome}</td><td>${r.idExterno||'—'}</td></tr>`).join('')}</tbody></table>${csvData.length>8?`<div class="text-muted" style="padding:.5rem">...e mais ${csvData.length-8} produto(s)</div>`:''}`;
+  document.getElementById('csv-import-btn-wrap').style.display='block';
 }
 async function importarCSV(){
   for(const p of csvData)await dbPut('produtos',p);
