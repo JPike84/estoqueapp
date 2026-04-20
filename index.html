@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EstoqueApp</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   :root{
@@ -15,7 +16,7 @@
   body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;overflow-x:hidden}
   @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
   nav{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 1rem;display:flex;align-items:center;position:sticky;top:0;z-index:100;overflow-x:auto}
-  .nav-logo{font-weight:700;font-size:17px;color:var(--accent);padding:14px 16px 14px 0;white-space:nowrap;border-right:1px solid var(--border);margin-right:8px}
+  .nav-logo{font-weight:700;font-size:17px;color:var(--accent);padding:14px 16px 14px 0;white-space:nowrap;border-right:1px solid var(--border);margin-right:8px;flex-shrink:0}
   .nav-btn{background:none;border:none;color:var(--text2);padding:14px 12px;cursor:pointer;font-size:13px;font-family:var(--font);white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s}
   .nav-btn:hover{color:var(--text)}
   .nav-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
@@ -27,6 +28,7 @@
   .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
   .btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:#c0392b}
   .btn-ghost{background:var(--bg3);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:var(--bg4)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
   input,select{background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font);font-size:14px;padding:9px 12px;width:100%;outline:none;transition:border .2s}
   input:focus,select:focus{border-color:var(--accent)}
   label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
@@ -48,6 +50,7 @@
   .alert-success{background:#1a3d2a;color:var(--green);border:1px solid #2ecc7140}
   .alert-error{background:#3d1a1a;color:var(--red);border:1px solid #e74c3c40}
   .alert-info{background:#1a2a3d;color:var(--accent);border:1px solid #4f8ef740}
+  .alert-warn{background:#3d2f0a;color:var(--amber);border:1px solid #f39c1240}
   .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:1rem}
   .stat-card{background:var(--bg3);border-radius:var(--radius);padding:1rem;text-align:center}
   .stat-val{font-size:24px;font-weight:700;color:var(--accent)}
@@ -74,7 +77,7 @@
   .tab-btn{flex:1;padding:7px;border:none;background:none;color:var(--text2);font-family:var(--font);font-size:13px;border-radius:6px;cursor:pointer;transition:all .2s}
   .tab-btn.active{background:var(--bg2);color:var(--text);font-weight:500}
   .tab-content{display:none}.tab-content.active{display:block}
-  .search-results{background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-top:4px;overflow:hidden;max-height:220px;overflow-y:auto}
+  .search-results{background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-top:4px;max-height:220px;overflow-y:auto}
   .search-item{padding:10px 14px;cursor:pointer;transition:background .15s;border-bottom:1px solid rgba(255,255,255,.04)}
   .search-item:last-child{border-bottom:none}
   .search-item:hover,.search-item:active{background:var(--bg4)}
@@ -82,9 +85,9 @@
   .search-item-ean{font-size:11px;color:var(--text2);margin-top:1px}
   .sem-ean-tag{background:#3d2f0a;color:var(--amber);border:1px solid #f39c1240;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
   .no-results{padding:10px 14px;color:var(--text2);font-size:13px}
+  /* SCANNER */
   #scanner-wrap{position:relative;width:100%;background:#000;border-radius:10px;overflow:hidden;min-height:280px;display:flex;align-items:center;justify-content:center}
   #scanner-video{width:100%;display:block;object-fit:cover}
-  #scanner-canvas{display:none}
   .scanner-frame{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:72%;height:38%;pointer-events:none}
   .scanner-frame::before,.scanner-frame::after{content:'';position:absolute;width:22px;height:22px;border-color:var(--accent);border-style:solid}
   .scanner-frame::before{top:0;left:0;border-width:3px 0 0 3px;border-radius:4px 0 0 0}
@@ -96,9 +99,23 @@
   @keyframes laser{0%,100%{transform:translateY(-60px);opacity:.4}50%{transform:translateY(60px);opacity:1}}
   #scan-status{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:12px;color:rgba(255,255,255,.8);padding:0 10px;text-shadow:0 1px 3px rgba(0,0,0,.8)}
   #scan-detected{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:5px 16px;border-radius:20px;font-weight:600;font-size:13px;display:none;white-space:nowrap}
+  /* LOADING */
+  .loading{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .sync-bar{background:var(--bg3);border-bottom:1px solid var(--border);padding:6px 1rem;font-size:12px;color:var(--text2);display:none;align-items:center;gap:8px}
+  .sync-bar.show{display:flex}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
+  .dot.syncing{background:var(--amber);animation:pulse 1s ease-in-out infinite}
+  .dot.error{background:var(--red)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 </style>
 </head>
 <body>
+
+<div class="sync-bar" id="sync-bar">
+  <div class="dot" id="sync-dot"></div>
+  <span id="sync-msg">Conectado</span>
+</div>
 
 <nav>
   <div class="nav-logo">📦 EstoqueApp</div>
@@ -110,9 +127,14 @@
   <button class="nav-btn" onclick="showPage('importar')">Importar CSV</button>
 </nav>
 
+<!-- HOME -->
 <div class="page active" id="page-home">
   <div class="section-title">Painel</div>
-  <div class="stats-grid" id="stats-home"></div>
+  <div class="stats-grid" id="stats-home">
+    <div class="stat-card"><div class="stat-val">—</div><div class="stat-lbl">Produtos</div></div>
+    <div class="stat-card"><div class="stat-val">—</div><div class="stat-lbl">Contagens</div></div>
+    <div class="stat-card"><div class="stat-val">—</div><div class="stat-lbl">Registros</div></div>
+  </div>
   <div class="card">
     <div class="card-title">Ações Rápidas</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -131,6 +153,7 @@
   </div>
 </div>
 
+<!-- CONTAGEM -->
 <div class="page" id="page-contagem">
   <div class="section-title">Contagem de Estoque</div>
   <div id="no-contagem">
@@ -159,11 +182,13 @@
   </div>
 </div>
 
+<!-- HISTÓRICO -->
 <div class="page" id="page-historico">
   <div class="section-title">Histórico de Contagens</div>
   <div id="historico-list"></div>
 </div>
 
+<!-- RELATÓRIOS -->
 <div class="page" id="page-relatorios">
   <div class="section-title">Relatórios</div>
   <div class="card">
@@ -186,6 +211,7 @@
   </div>
 </div>
 
+<!-- PRODUTOS -->
 <div class="page" id="page-produtos">
   <div class="section-title">Cadastro de Produtos</div>
   <div class="card">
@@ -208,18 +234,20 @@
   </div>
 </div>
 
+<!-- IMPORTAR -->
 <div class="page" id="page-importar">
   <div class="section-title">Importar via CSV</div>
   <div class="card">
-    <div class="card-title">Formato</div>
-    <div class="text-muted" style="margin-bottom:.5rem">Coluna <b>nome</b> obrigatória. <b>ean</b> opcional.</div>
-    <div style="background:var(--bg3);border-radius:8px;padding:10px 14px;font-family:monospace;font-size:13px;color:var(--text2)">ean, nome, id, qtd</div>
+    <div class="card-title">Formato aceito</div>
+    <div class="text-muted" style="margin-bottom:.5rem">Separador vírgula <b>ou ponto e vírgula</b>. Encoding UTF-8 ou Latin-1.</div>
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 14px;font-family:monospace;font-size:13px;color:var(--text2)">EAN ; nome ; ID</div>
+    <div class="text-muted" style="margin-top:.5rem">Coluna EAN opcional. "Sem Código" é tratado como produto sem EAN.</div>
   </div>
   <div class="card">
     <div class="form-group"><label>Arquivo CSV</label><input type="file" id="csv-file" accept=".csv" onchange="previewCSV()" style="cursor:pointer"></div>
     <div id="csv-preview"></div>
     <div style="margin-top:10px;display:none" id="csv-import-btn-wrap">
-      <button class="btn btn-primary" onclick="importarCSV()">📥 Importar</button>
+      <button class="btn btn-primary" id="csv-import-btn" onclick="importarCSV()">📥 Importar</button>
     </div>
     <div id="csv-alert" style="margin-top:10px"></div>
   </div>
@@ -231,7 +259,6 @@
     <h3 style="margin-bottom:.75rem">Scanner</h3>
     <div id="scanner-wrap">
       <video id="scanner-video" autoplay playsinline muted></video>
-      <canvas id="scanner-canvas"></canvas>
       <div class="scanner-frame"><div class="sf-tr"></div><div class="sf-bl"></div></div>
       <div class="scan-laser"></div>
       <div id="scan-status">Iniciando câmera...</div>
@@ -239,7 +266,7 @@
     </div>
     <div id="scanner-error" style="display:none;margin-top:.75rem"></div>
     <div style="margin-top:1rem">
-      <div class="text-muted" style="font-size:12px;margin-bottom:.5rem">Ou insira o código manualmente:</div>
+      <div class="text-muted" style="font-size:12px;margin-bottom:.5rem">Ou insira manualmente:</div>
       <div style="display:flex;gap:8px">
         <input id="manual-ean-scanner" placeholder="Código EAN..." onkeydown="if(event.key==='Enter')submitManualScanner()">
         <button class="btn btn-ghost" onclick="submitManualScanner()">OK</button>
@@ -311,7 +338,7 @@
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modal-qtd')">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmarQtd()">Confirmar</button>
+      <button class="btn btn-primary" id="btn-confirmar-qtd" onclick="confirmarQtd()">Confirmar</button>
     </div>
   </div>
 </div>
@@ -330,36 +357,159 @@
 </div>
 
 <script>
-let db,currentContagemId=null,eanAtual=null,contagemDetalheId=null,produtoSelecionadoNome=null;
+// ===== SUPABASE =====
+const SUPA_URL='https://vmewhzvioaumgcosxxcc.supabase.co';
+const SUPA_KEY='sb_publishable_DMMST4h_taMImtgfYAVJlA_9-CkHZ9I';
+const {createClient}=supabase;
+const sb=createClient(SUPA_URL,SUPA_KEY);
 
-function initDB(){
-  return new Promise((res,rej)=>{
-    const r=indexedDB.open('EstoqueDB',4);
-    r.onupgradeneeded=e=>{
-      const d=e.target.result;
-      if(!d.objectStoreNames.contains('produtos'))d.createObjectStore('produtos',{keyPath:'ean'});
-      if(!d.objectStoreNames.contains('contagens'))d.createObjectStore('contagens',{keyPath:'id',autoIncrement:true});
-      if(!d.objectStoreNames.contains('itens')){
-        const s=d.createObjectStore('itens',{keyPath:'id',autoIncrement:true});
-        s.createIndex('contagemId','contagemId',{unique:false});
-        s.createIndex('ean','ean',{unique:false});
-      }
-    };
-    r.onsuccess=e=>{db=e.target.result;res()};
-    r.onerror=rej;
-  });
+let currentContagemId=null,eanAtual=null,contagemDetalheId=null,produtoSelecionadoNome=null;
+let produtosCache=[];
+
+function setSyncStatus(status,msg){
+  const bar=document.getElementById('sync-bar');
+  const dot=document.getElementById('sync-dot');
+  const m=document.getElementById('sync-msg');
+  bar.classList.add('show');
+  dot.className='dot';
+  if(status==='ok'){dot.classList.add('');m.textContent=msg||'Conectado';}
+  else if(status==='syncing'){dot.classList.add('syncing');m.textContent=msg||'Sincronizando...';}
+  else if(status==='error'){dot.classList.add('error');m.textContent=msg||'Erro de conexão';}
 }
-const dbGet=(s,k)=>new Promise((r,j)=>{const t=db.transaction(s,'readonly');const q=t.objectStore(s).get(k);q.onsuccess=()=>r(q.result);q.onerror=j});
-const dbPut=(s,v)=>new Promise((r,j)=>{const t=db.transaction(s,'readwrite');const q=t.objectStore(s).put(v);q.onsuccess=()=>r(q.result);q.onerror=j});
-const dbAdd=(s,v)=>new Promise((r,j)=>{const t=db.transaction(s,'readwrite');const q=t.objectStore(s).add(v);q.onsuccess=()=>r(q.result);q.onerror=j});
-const dbGetAll=(s)=>new Promise((r,j)=>{const t=db.transaction(s,'readonly');const q=t.objectStore(s).getAll();q.onsuccess=()=>r(q.result);q.onerror=j});
-const dbGetByIndex=(s,i,v)=>new Promise((r,j)=>{const t=db.transaction(s,'readonly');const q=t.objectStore(s).index(i).getAll(v);q.onsuccess=()=>r(q.result);q.onerror=j});
-const dbDelete=(s,k)=>new Promise((r,j)=>{const t=db.transaction(s,'readwrite');const q=t.objectStore(s).delete(k);q.onsuccess=()=>r(q.result);q.onerror=j});
+
+// ===== DB SUPABASE =====
+async function sbGetAll(table,order='id'){
+  const{data,error}=await sb.from(table).select('*').order(order,{ascending:true});
+  if(error)throw error;
+  return data||[];
+}
+async function sbGet(table,col,val){
+  const{data,error}=await sb.from(table).select('*').eq(col,val).single();
+  if(error&&error.code!=='PGRST116')throw error;
+  return data||null;
+}
+async function sbInsert(table,obj){
+  const{data,error}=await sb.from(table).insert(obj).select().single();
+  if(error)throw error;
+  return data;
+}
+async function sbUpsert(table,obj,key='ean'){
+  const{data,error}=await sb.from(table).upsert(obj,{onConflict:key}).select().single();
+  if(error)throw error;
+  return data;
+}
+async function sbUpdate(table,col,val,obj){
+  const{error}=await sb.from(table).update(obj).eq(col,val);
+  if(error)throw error;
+}
+async function sbDelete(table,col,val){
+  const{error}=await sb.from(table).delete().eq(col,val);
+  if(error)throw error;
+}
+async function sbGetByFK(table,col,val){
+  const{data,error}=await sb.from(table).select('*').eq(col,val).order('ts',{ascending:true});
+  if(error)throw error;
+  return data||[];
+}
+
 const gerarEanInterno=nome=>'SEM-EAN-'+nome.toUpperCase().replace(/\s+/g,'-').slice(0,20)+'-'+Date.now().toString(36).slice(-4);
+
+// ===== NAV =====
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>{if(b.getAttribute('onclick').includes("'"+id+"'"))b.classList.add('active')});
+  if(id==='home')renderHome();
+  if(id==='historico')renderHistorico();
+  if(id==='relatorios')renderSelectContagens();
+  if(id==='produtos'){produtosCache=[];renderProdutos();}
+  if(id==='contagem')renderContagem();
+}
+
+// ===== HOME =====
+async function renderHome(){
+  try{
+    setSyncStatus('syncing','Carregando...');
+    const[prods,conts,itens]=await Promise.all([sbGetAll('produtos'),sbGetAll('contagens'),sbGetAll('itens')]);
+    setSyncStatus('ok','Conectado');
+    document.getElementById('stats-home').innerHTML=`
+      <div class="stat-card"><div class="stat-val">${prods.length}</div><div class="stat-lbl">Produtos</div></div>
+      <div class="stat-card"><div class="stat-val">${conts.length}</div><div class="stat-lbl">Contagens</div></div>
+      <div class="stat-card"><div class="stat-val">${itens.length}</div><div class="stat-lbl">Registros</div></div>`;
+    const ativa=document.getElementById('contagem-ativa-home');
+    if(currentContagemId){
+      ativa.style.display='block';
+      const its=itens.filter(i=>i.contagem_id===currentContagemId);
+      const c=conts.find(x=>x.id===currentContagemId);
+      document.getElementById('home-count-info').innerHTML=`<div class="text-muted">${c?.descricao||''} — ${its.length} item(ns)</div>`;
+    } else ativa.style.display='none';
+  }catch(e){setSyncStatus('error','Erro: '+e.message);}
+}
+
+// ===== CONTAGEM =====
+async function iniciarContagem(){
+  try{
+    setSyncStatus('syncing','Criando contagem...');
+    const c=await sbInsert('contagens',{descricao:'Contagem '+new Date().toLocaleString('pt-BR'),inicio:new Date().toISOString(),status:'ativa'});
+    currentContagemId=c.id;
+    setSyncStatus('ok','Conectado');
+    showPage('contagem');
+  }catch(e){setSyncStatus('error','Erro: '+e.message);alert('Erro ao criar contagem: '+e.message);}
+}
+
+async function renderContagem(){
+  if(!currentContagemId){
+    document.getElementById('no-contagem').style.display='block';
+    document.getElementById('contagem-ativa').style.display='none';
+    return;
+  }
+  document.getElementById('no-contagem').style.display='none';
+  document.getElementById('contagem-ativa').style.display='block';
+  try{
+    const c=await sbGet('contagens','id',currentContagemId);
+    document.getElementById('count-badge').textContent='Contagem #'+currentContagemId;
+    document.getElementById('count-info-date').textContent='Iniciada em '+new Date(c.inicio).toLocaleString('pt-BR');
+    await renderItensContagem();
+  }catch(e){setSyncStatus('error','Erro: '+e.message);}
+}
+
+async function renderItensContagem(){
+  try{
+    const itens=await sbGetByFK('itens','contagem_id',currentContagemId);
+    document.getElementById('count-total-items').textContent=itens.length;
+    const el=document.getElementById('count-items-list');
+    if(!itens.length){el.innerHTML='<div class="empty-state" style="padding:1.5rem"><div>Nenhum item ainda.</div></div>';return;}
+    const g={};
+    itens.forEach(i=>{
+      if(!g[i.ean])g[i.ean]={ean:i.ean,nome:i.nome,qtd:0,validades:[],sem_ean:i.sem_ean};
+      g[i.ean].qtd+=i.qtd;
+      if(i.validade&&i.validade!=='N/A')g[i.ean].validades.push(i.validade);
+    });
+    el.innerHTML=Object.values(g).map(x=>`
+      <div class="item-count">
+        <div class="item-info">
+          <div class="item-name">${x.nome||'—'} ${x.sem_ean?'<span class="sem-ean-tag">sem EAN</span>':''}</div>
+          <div class="item-ean">${x.sem_ean?'sem código':x.ean}${x.validades.length?' · Val: '+[...new Set(x.validades)].join(', '):''}</div>
+        </div>
+        <div class="qty-display">${x.qtd}</div>
+      </div>`).join('');
+  }catch(e){setSyncStatus('error','Erro: '+e.message);}
+}
+
+async function encerrarContagem(){
+  if(!currentContagemId)return;
+  try{
+    const its=await sbGetByFK('itens','contagem_id',currentContagemId);
+    if(!its.length&&!confirm('Nenhum item. Encerrar mesmo assim?'))return;
+    await sbUpdate('contagens','id',currentContagemId,{fim:new Date().toISOString(),status:'encerrada'});
+    currentContagemId=null;
+    showPage('historico');
+  }catch(e){setSyncStatus('error','Erro: '+e.message);}
+}
 
 // ===== SCANNER =====
 let scannerStream=null,scannerRAF=null,scannerActive=false;
-
 async function abrirScanner(){
   document.getElementById('modal-scanner').classList.add('open');
   document.getElementById('scan-status').textContent='Iniciando câmera...';
@@ -367,69 +517,40 @@ async function abrirScanner(){
   document.getElementById('scanner-error').style.display='none';
   document.getElementById('manual-ean-scanner').value='';
   scannerActive=true;
-  await iniciarCamera();
-}
-
-async function iniciarCamera(){
-  const video=document.getElementById('scanner-video');
-  const errEl=document.getElementById('scanner-error');
   try{
-    scannerStream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}
-    });
-    video.srcObject=scannerStream;
-    await video.play();
+    scannerStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}});
+    document.getElementById('scanner-video').srcObject=scannerStream;
+    await document.getElementById('scanner-video').play();
     document.getElementById('scan-status').textContent='Aponte para o código de barras';
-    iniciarDeteccao();
-  }catch(e){
-    try{
-      scannerStream=await navigator.mediaDevices.getUserMedia({video:true});
-      video.srcObject=scannerStream;
-      await video.play();
-      document.getElementById('scan-status').textContent='Aponte para o código de barras';
-      iniciarDeteccao();
-    }catch(e2){
-      errEl.style.display='block';
-      errEl.innerHTML=`<div class="alert alert-error">Não foi possível acessar a câmera.<br><small>${e2.message}</small><br><br>Dicas: abra o arquivo pelo Chrome, verifique permissões em Configurações > Privacidade > Câmera.</div>`;
-      document.getElementById('scan-status').textContent='Erro';
-    }
-  }
-}
-
-function iniciarDeteccao(){
-  if('BarcodeDetector' in window){
-    BarcodeDetector.getSupportedFormats().then(formats=>{
+    if('BarcodeDetector' in window){
+      const formats=await BarcodeDetector.getSupportedFormats();
       const detector=new BarcodeDetector({formats});
       loopDetector(detector);
-    });
-  } else {
+    } else {
+      document.getElementById('scanner-error').style.display='block';
+      document.getElementById('scanner-error').innerHTML='<div class="alert alert-info">Detecção automática indisponível. Use a entrada manual abaixo.</div>';
+    }
+  }catch(e){
     document.getElementById('scanner-error').style.display='block';
-    document.getElementById('scanner-error').innerHTML='<div class="alert alert-info">Detecção automática não disponível neste navegador. Use a entrada manual abaixo ou atualize o Chrome.</div>';
-    document.getElementById('scan-status').textContent='Câmera ativa';
+    document.getElementById('scanner-error').innerHTML=`<div class="alert alert-error">Câmera indisponível: ${e.message}</div>`;
+    document.getElementById('scan-status').textContent='Erro';
   }
 }
-
 function loopDetector(detector){
   if(!scannerActive)return;
   const video=document.getElementById('scanner-video');
   if(video.readyState<2){scannerRAF=requestAnimationFrame(()=>loopDetector(detector));return;}
-  detector.detect(video).then(barcodes=>{
-    if(barcodes&&barcodes.length>0){
-      const code=barcodes[0].rawValue;
-      if(code){
-        try{navigator.vibrate&&navigator.vibrate(100);}catch(e){}
+  detector.detect(video).then(b=>{
+    if(b&&b.length){
+      const code=b[0].rawValue;
+      if(code){try{navigator.vibrate&&navigator.vibrate(100);}catch(e){}
         document.getElementById('scan-detected').textContent='✓ '+code;
         document.getElementById('scan-detected').style.display='block';
-        setTimeout(()=>{pararScanner();processarEAN(code);},600);
-        return;
-      }
+        setTimeout(()=>{pararScanner();processarEAN(code);},600);return;}
     }
     scannerRAF=requestAnimationFrame(()=>loopDetector(detector));
-  }).catch(()=>{
-    scannerRAF=requestAnimationFrame(()=>loopDetector(detector));
-  });
+  }).catch(()=>{scannerRAF=requestAnimationFrame(()=>loopDetector(detector));});
 }
-
 function pararScanner(){
   scannerActive=false;
   if(scannerRAF){cancelAnimationFrame(scannerRAF);scannerRAF=null;}
@@ -437,12 +558,7 @@ function pararScanner(){
   document.getElementById('scanner-video').srcObject=null;
   fecharModal('modal-scanner');
 }
-
-function submitManualScanner(){
-  const v=document.getElementById('manual-ean-scanner').value.trim();
-  if(!v)return;
-  pararScanner();processarEAN(v);
-}
+function submitManualScanner(){const v=document.getElementById('manual-ean-scanner').value.trim();if(!v)return;pararScanner();processarEAN(v);}
 
 // ===== INSERIR =====
 function abrirInserir(){
@@ -461,14 +577,10 @@ function switchTab(t){
     document.getElementById('tab-'+x).classList.toggle('active',x===t);
     document.getElementById('tab-'+x+'-btn').classList.toggle('active',x===t);
   });
-  if(t==='nome')setTimeout(()=>document.getElementById('busca-nome').focus(),100);
-  else setTimeout(()=>document.getElementById('manual-ean').focus(),100);
+  setTimeout(()=>document.getElementById(t==='nome'?'busca-nome':'manual-ean').focus(),100);
 }
-function confirmarManualEAN(){
-  const v=document.getElementById('manual-ean').value.trim();
-  if(!v)return;
-  fecharModal('modal-inserir');processarEAN(v);
-}
+function confirmarManualEAN(){const v=document.getElementById('manual-ean').value.trim();if(!v)return;fecharModal('modal-inserir');processarEAN(v);}
+
 async function buscarPorNome(){
   const q=document.getElementById('busca-nome').value.trim().toLowerCase();
   const el=document.getElementById('nome-results');
@@ -476,17 +588,23 @@ async function buscarPorNome(){
   document.getElementById('btn-confirmar-nome').disabled=true;
   produtoSelecionadoNome=null;
   if(q.length<2){el.style.display='none';return;}
-  const prods=await dbGetAll('produtos');
-  const matches=prods.filter(p=>p.nome.toLowerCase().includes(q)).slice(0,10);
+  // busca no cache ou no servidor
+  if(!produtosCache.length){
+    const{data}=await sb.from('produtos').select('ean,nome').order('nome');
+    produtosCache=data||[];
+  }
+  const matches=produtosCache.filter(p=>p.nome.toLowerCase().includes(q)).slice(0,12);
   el.style.display='block';
   el.innerHTML=matches.length?matches.map(p=>`
-    <div class="search-item" onclick="selecionarProdutoNome('${p.ean}')">
+    <div class="search-item" onclick="selecionarProdutoNome('${p.ean.replace(/'/g,"\\'")}')">
       <div class="search-item-name">${p.nome}</div>
       <div class="search-item-ean">${p.ean.startsWith('SEM-EAN-')?'<span class="sem-ean-tag">sem EAN</span>':p.ean}</div>
     </div>`).join(''):'<div class="no-results">Nenhum produto encontrado.</div>';
 }
+
 async function selecionarProdutoNome(ean){
-  const p=await dbGet('produtos',ean);if(!p)return;
+  const p=produtosCache.find(x=>x.ean===ean)||await sbGet('produtos','ean',ean);
+  if(!p)return;
   produtoSelecionadoNome=p;
   document.getElementById('nome-results').style.display='none';
   document.getElementById('busca-nome').value=p.nome;
@@ -495,14 +613,11 @@ async function selecionarProdutoNome(ean){
   document.getElementById('sel-ean-display').textContent=p.ean.startsWith('SEM-EAN-')?'Sem código de barras':'EAN: '+p.ean;
   document.getElementById('btn-confirmar-nome').disabled=false;
 }
-function confirmarSelecionadoNome(){
-  if(!produtoSelecionadoNome)return;
-  fecharModal('modal-inserir');processarEAN(produtoSelecionadoNome.ean);
-}
+function confirmarSelecionadoNome(){if(!produtoSelecionadoNome)return;fecharModal('modal-inserir');processarEAN(produtoSelecionadoNome.ean);}
 
 async function processarEAN(ean){
   eanAtual=ean;
-  const prod=await dbGet('produtos',ean);
+  const prod=await sbGet('produtos','ean',ean);
   const semEan=ean.startsWith('SEM-EAN-');
   document.getElementById('modal-produto-info').innerHTML=`
     <div style="background:var(--bg3);border-radius:8px;padding:10px 14px">
@@ -532,178 +647,148 @@ async function confirmarQtd(){
     validade=document.getElementById('modal-validade').value.trim();
     if(!validade||validade.length<10){alert('Insira a data de validade ou marque "Não relevante".');return;}
   } else validade='N/A';
-  const prod=await dbGet('produtos',eanAtual);
-  await dbAdd('itens',{contagemId:currentContagemId,ean:eanAtual,nome:prod?.nome||'',qtd,validade,semEan:eanAtual.startsWith('SEM-EAN-'),ts:new Date().toISOString()});
-  fecharModal('modal-qtd');
-  await renderItensContagem();
+  const btn=document.getElementById('btn-confirmar-qtd');
+  btn.disabled=true;btn.innerHTML='<span class="loading"></span>Salvando...';
+  try{
+    const prod=await sbGet('produtos','ean',eanAtual);
+    await sbInsert('itens',{contagem_id:currentContagemId,ean:eanAtual,nome:prod?.nome||'',qtd,validade,sem_ean:eanAtual.startsWith('SEM-EAN-'),ts:new Date().toISOString()});
+    fecharModal('modal-qtd');
+    await renderItensContagem();
+  }catch(e){alert('Erro ao salvar: '+e.message);setSyncStatus('error','Erro: '+e.message);}
+  finally{btn.disabled=false;btn.innerHTML='Confirmar';}
 }
 function fecharModal(id){document.getElementById(id).classList.remove('open');}
 
-function showPage(id){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('page-'+id).classList.add('active');
-  document.querySelectorAll('.nav-btn').forEach(b=>{if(b.getAttribute('onclick').includes("'"+id+"'"))b.classList.add('active')});
-  if(id==='home')renderHome();
-  if(id==='historico')renderHistorico();
-  if(id==='relatorios')renderSelectContagens();
-  if(id==='produtos')renderProdutos();
-  if(id==='contagem')renderContagem();
-}
-
-async function renderHome(){
-  const [prods,conts,itens]=await Promise.all([dbGetAll('produtos'),dbGetAll('contagens'),dbGetAll('itens')]);
-  document.getElementById('stats-home').innerHTML=`
-    <div class="stat-card"><div class="stat-val">${prods.length}</div><div class="stat-lbl">Produtos</div></div>
-    <div class="stat-card"><div class="stat-val">${conts.length}</div><div class="stat-lbl">Contagens</div></div>
-    <div class="stat-card"><div class="stat-val">${itens.length}</div><div class="stat-lbl">Registros</div></div>`;
-  const ativa=document.getElementById('contagem-ativa-home');
-  if(currentContagemId){
-    ativa.style.display='block';
-    const [c,its]=await Promise.all([dbGet('contagens',currentContagemId),dbGetByIndex('itens','contagemId',currentContagemId)]);
-    document.getElementById('home-count-info').innerHTML=`<div class="text-muted">${c?.descricao} — ${its.length} item(ns)</div>`;
-  } else ativa.style.display='none';
-}
-
-async function iniciarContagem(){
-  const id=await dbAdd('contagens',{descricao:'Contagem '+new Date().toLocaleString('pt-BR'),inicio:new Date().toISOString(),fim:null,status:'ativa'});
-  currentContagemId=id;showPage('contagem');
-}
-async function renderContagem(){
-  if(!currentContagemId){document.getElementById('no-contagem').style.display='block';document.getElementById('contagem-ativa').style.display='none';return;}
-  document.getElementById('no-contagem').style.display='none';document.getElementById('contagem-ativa').style.display='block';
-  const c=await dbGet('contagens',currentContagemId);
-  document.getElementById('count-badge').textContent='Contagem #'+currentContagemId;
-  document.getElementById('count-info-date').textContent='Iniciada em '+new Date(c.inicio).toLocaleString('pt-BR');
-  await renderItensContagem();
-}
-async function renderItensContagem(){
-  const itens=await dbGetByIndex('itens','contagemId',currentContagemId);
-  document.getElementById('count-total-items').textContent=itens.length;
-  const el=document.getElementById('count-items-list');
-  if(!itens.length){el.innerHTML='<div class="empty-state" style="padding:1.5rem"><div>Nenhum item ainda.</div></div>';return;}
-  const g={};
-  itens.forEach(i=>{if(!g[i.ean])g[i.ean]={ean:i.ean,nome:i.nome,qtd:0,validades:[],semEan:i.semEan};g[i.ean].qtd+=i.qtd;if(i.validade&&i.validade!=='N/A')g[i.ean].validades.push(i.validade);});
-  el.innerHTML=Object.values(g).map(x=>`
-    <div class="item-count">
-      <div class="item-info">
-        <div class="item-name">${x.nome||'—'} ${x.semEan?'<span class="sem-ean-tag">sem EAN</span>':''}</div>
-        <div class="item-ean">${x.semEan?'sem código':x.ean}${x.validades.length?' · Val: '+[...new Set(x.validades)].join(', '):''}</div>
-      </div>
-      <div class="qty-display">${x.qtd}</div>
-    </div>`).join('');
-}
-async function encerrarContagem(){
-  if(!currentContagemId)return;
-  const its=await dbGetByIndex('itens','contagemId',currentContagemId);
-  if(!its.length&&!confirm('Nenhum item. Encerrar mesmo assim?'))return;
-  const c=await dbGet('contagens',currentContagemId);
-  await dbPut('contagens',{...c,fim:new Date().toISOString(),status:'encerrada'});
-  currentContagemId=null;showPage('historico');
-}
-
+// ===== HISTÓRICO =====
 async function renderHistorico(){
-  const conts=await dbGetAll('contagens');
   const el=document.getElementById('historico-list');
-  if(!conts.length){el.innerHTML='<div class="empty-state"><div class="big">📭</div><div>Nenhuma contagem.</div></div>';return;}
-  el.innerHTML=[...conts].reverse().map(c=>`
-    <div class="card" style="cursor:pointer" onclick="abrirDetalhe(${c.id})">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-        <div>
-          <div style="font-weight:600">${c.descricao}</div>
-          <div class="text-muted">Início: ${new Date(c.inicio).toLocaleString('pt-BR')}${c.fim?' · Fim: '+new Date(c.fim).toLocaleString('pt-BR'):''}</div>
+  el.innerHTML='<div class="text-muted" style="padding:1rem">Carregando...</div>';
+  try{
+    const conts=await sbGetAll('contagens','id');
+    if(!conts.length){el.innerHTML='<div class="empty-state"><div class="big">📭</div><div>Nenhuma contagem.</div></div>';return;}
+    el.innerHTML=[...conts].reverse().map(c=>`
+      <div class="card" style="cursor:pointer" onclick="abrirDetalhe(${c.id})">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="font-weight:600">${c.descricao}</div>
+            <div class="text-muted">Início: ${new Date(c.inicio).toLocaleString('pt-BR')}${c.fim?' · Fim: '+new Date(c.fim).toLocaleString('pt-BR'):''}</div>
+          </div>
+          <span class="badge ${c.status==='ativa'?'badge-amber':'badge-green'}">${c.status==='ativa'?'Em andamento':'Encerrada'}</span>
         </div>
-        <span class="badge ${c.status==='ativa'?'badge-amber':'badge-green'}">${c.status==='ativa'?'Em andamento':'Encerrada'}</span>
-      </div>
-    </div>`).join('');
+      </div>`).join('');
+  }catch(e){el.innerHTML=`<div class="alert alert-error">Erro ao carregar: ${e.message}</div>`;}
 }
+
 async function abrirDetalhe(id){
   contagemDetalheId=id;
-  const [c,itens]=await Promise.all([dbGet('contagens',id),dbGetByIndex('itens','contagemId',id)]);
+  const[c,itens]=await Promise.all([sbGet('contagens','id',id),sbGetByFK('itens','contagem_id',id)]);
   document.getElementById('detalhe-title').textContent=c.descricao;
   const g={};
-  itens.forEach(i=>{if(!g[i.ean])g[i.ean]={ean:i.ean,nome:i.nome,qtd:0,validades:[],semEan:i.semEan,ts:i.ts};g[i.ean].qtd+=i.qtd;if(i.validade)g[i.ean].validades.push(i.validade);});
+  itens.forEach(i=>{if(!g[i.ean])g[i.ean]={ean:i.ean,nome:i.nome,qtd:0,validades:[],sem_ean:i.sem_ean};g[i.ean].qtd+=i.qtd;if(i.validade)g[i.ean].validades.push(i.validade);});
   const rows=Object.values(g);
   document.getElementById('detalhe-content').innerHTML=`
     <div class="text-muted" style="margin-bottom:.75rem">Início: ${new Date(c.inicio).toLocaleString('pt-BR')}${c.fim?' · Fim: '+new Date(c.fim).toLocaleString('pt-BR'):''}</div>
-    ${rows.length?`<table class="tbl"><thead><tr><th>EAN</th><th>Nome</th><th>Qtd</th><th>Validade(s)</th></tr></thead><tbody>
-    ${rows.map(r=>`<tr><td style="font-size:11px">${r.semEan?'<span class="sem-ean-tag">sem EAN</span>':r.ean}</td><td>${r.nome||'—'}</td><td><b>${r.qtd}</b></td><td style="font-size:11px">${[...new Set(r.validades)].join('<br>')||'—'}</td></tr>`).join('')}
-    </tbody></table>`:'<div class="text-muted">Nenhum item.</div>'}`;
+    ${rows.length?`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>EAN</th><th>Nome</th><th>Qtd</th><th>Validade(s)</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td style="font-size:11px">${r.sem_ean?'<span class="sem-ean-tag">sem EAN</span>':r.ean}</td><td>${r.nome||'—'}</td><td><b>${r.qtd}</b></td><td style="font-size:11px">${[...new Set(r.validades)].join('<br>')||'—'}</td></tr>`).join('')}
+    </tbody></table></div>`:'<div class="text-muted">Nenhum item.</div>'}`;
   document.getElementById('modal-detalhe').classList.add('open');
 }
 
+// ===== RELATÓRIOS =====
 async function renderSelectContagens(){
-  const conts=await dbGetAll('contagens');
+  const conts=await sbGetAll('contagens','id');
   document.getElementById('select-contagem-rel').innerHTML='<option value="">— selecione —</option>'+[...conts].reverse().map(c=>`<option value="${c.id}">${c.descricao} (${new Date(c.inicio).toLocaleDateString('pt-BR')})</option>`).join('');
 }
 async function gerarRelatorioContagem(){
-  const id=parseInt(document.getElementById('select-contagem-rel').value);if(!id){document.getElementById('rel-contagem-resultado').innerHTML='';return;}
-  const itens=await dbGetByIndex('itens','contagemId',id);
-  const g={};itens.forEach(i=>{if(!g[i.ean])g[i.ean]={ean:i.ean,nome:i.nome,qtd:0,validades:[],semEan:i.semEan};g[i.ean].qtd+=i.qtd;if(i.validade)g[i.ean].validades.push(i.validade);});
+  const id=parseInt(document.getElementById('select-contagem-rel').value);
+  if(!id){document.getElementById('rel-contagem-resultado').innerHTML='';return;}
+  const itens=await sbGetByFK('itens','contagem_id',id);
+  const g={};itens.forEach(i=>{if(!g[i.ean])g[i.ean]={ean:i.ean,nome:i.nome,qtd:0,validades:[],sem_ean:i.sem_ean};g[i.ean].qtd+=i.qtd;if(i.validade)g[i.ean].validades.push(i.validade);});
   const rows=Object.values(g);
-  document.getElementById('rel-contagem-resultado').innerHTML=rows.length?`<table class="tbl"><thead><tr><th>EAN</th><th>Nome</th><th>Qtd</th><th>Validade(s)</th></tr></thead><tbody>${rows.map(r=>`<tr><td style="font-size:11px">${r.semEan?'<span class="sem-ean-tag">sem EAN</span>':r.ean}</td><td>${r.nome||'—'}</td><td><b>${r.qtd}</b></td><td style="font-size:11px">${[...new Set(r.validades)].join(', ')||'—'}</td></tr>`).join('')}</tbody></table>`:'<div class="text-muted">Nenhum item.</div>';
+  document.getElementById('rel-contagem-resultado').innerHTML=rows.length?`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>EAN</th><th>Nome</th><th>Qtd</th><th>Validade(s)</th></tr></thead><tbody>${rows.map(r=>`<tr><td style="font-size:11px">${r.sem_ean?'<span class="sem-ean-tag">sem EAN</span>':r.ean}</td><td>${r.nome||'—'}</td><td><b>${r.qtd}</b></td><td style="font-size:11px">${[...new Set(r.validades)].join(', ')||'—'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="text-muted">Nenhum item.</div>';
 }
+
 async function getConsolidadoData(){
-  const itens=await dbGetAll('itens');
-  const pk={};itens.forEach(i=>{const k=i.ean+'_'+i.contagemId;if(!pk[k])pk[k]={...i,qtdAcum:0,validades:[]};pk[k].qtdAcum+=i.qtd;if(i.validade)pk[k].validades.push(i.validade);});
+  const itens=await sbGetAll('itens','ts');
+  const pk={};
+  itens.forEach(i=>{const k=i.ean+'_'+i.contagem_id;if(!pk[k])pk[k]={...i,qtdAcum:0,validades:[]};pk[k].qtdAcum+=i.qtd;if(i.validade)pk[k].validades.push(i.validade);});
   const ult={};Object.values(pk).forEach(g=>{if(!ult[g.ean]||g.ts>ult[g.ean].ts)ult[g.ean]=g;});
   return Object.values(ult);
 }
 async function gerarConsolidado(){
+  document.getElementById('consolidado-resultado').innerHTML='<div class="text-muted">Carregando...</div>';
   const rows=await getConsolidadoData();
-  document.getElementById('consolidado-resultado').innerHTML=rows.length?`<table class="tbl"><thead><tr><th>EAN</th><th>Nome</th><th>Qtd</th><th>Validade(s)</th><th>Última Contagem</th></tr></thead><tbody>${rows.map(r=>`<tr><td style="font-size:11px">${r.semEan?'<span class="sem-ean-tag">sem EAN</span>':r.ean}</td><td>${r.nome||'—'}</td><td><b>${r.qtdAcum}</b></td><td style="font-size:11px">${[...new Set(r.validades)].join(', ')||'—'}</td><td style="font-size:11px">${new Date(r.ts).toLocaleDateString('pt-BR')}</td></tr>`).join('')}</tbody></table>`:'<div class="text-muted">Nenhum dado.</div>';
+  document.getElementById('consolidado-resultado').innerHTML=rows.length?`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>EAN</th><th>Nome</th><th>Qtd</th><th>Validade(s)</th><th>Última Contagem</th></tr></thead><tbody>${rows.map(r=>`<tr><td style="font-size:11px">${r.sem_ean?'<span class="sem-ean-tag">sem EAN</span>':r.ean}</td><td>${r.nome||'—'}</td><td><b>${r.qtdAcum}</b></td><td style="font-size:11px">${[...new Set(r.validades)].join(', ')||'—'}</td><td style="font-size:11px">${new Date(r.ts).toLocaleDateString('pt-BR')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="text-muted">Nenhum dado.</div>';
 }
 async function exportarConsolidadoCSV(){
   const rows=await getConsolidadoData();if(!rows.length){alert('Sem dados.');return;}
-  downloadCSV('cod,qtd,data\n'+rows.map(r=>`${r.semEan?'':r.ean},${r.qtdAcum},${new Date(r.ts).toLocaleDateString('pt-BR')}`).join('\n'),'estoque_'+fmtDate(new Date()));
+  downloadCSV('cod,qtd,data\n'+rows.map(r=>`${r.sem_ean?'':r.ean},${r.qtdAcum},${new Date(r.ts).toLocaleDateString('pt-BR')}`).join('\n'),'estoque_'+fmtDate(new Date()));
 }
 async function exportarValidadeCSV(){
   const rows=await getConsolidadoData();if(!rows.length){alert('Sem dados.');return;}
   let csv='nome,ean,validade,qtd\n';
-  rows.forEach(r=>{const v=[...new Set(r.validades)];const e=r.semEan?'':r.ean;(v.length?v:['N/A']).forEach(x=>{csv+=`"${r.nome||''}",${e},${x},${r.qtdAcum}\n`;});});
+  rows.forEach(r=>{const v=[...new Set(r.validades)];const e=r.sem_ean?'':r.ean;(v.length?v:['N/A']).forEach(x=>{csv+=`"${r.nome||''}",${e},${x},${r.qtdAcum}\n`;});});
   downloadCSV(csv,'validades_'+fmtDate(new Date()));
 }
 async function exportarCSVContagem(){
-  if(!contagemDetalheId)return;const itens=await dbGetByIndex('itens','contagemId',contagemDetalheId);
+  if(!contagemDetalheId)return;
+  const itens=await sbGetByFK('itens','contagem_id',contagemDetalheId);
   const g={};itens.forEach(i=>{if(!g[i.ean])g[i.ean]={...i,qtd:0};g[i.ean].qtd+=i.qtd;});
-  downloadCSV('cod,qtd,data\n'+Object.values(g).map(r=>`${r.semEan?'':r.ean},${r.qtd},${new Date(r.ts).toLocaleDateString('pt-BR')}`).join('\n'),'estoque_'+fmtDate(new Date()));
+  downloadCSV('cod,qtd,data\n'+Object.values(g).map(r=>`${r.sem_ean?'':r.ean},${r.qtd},${new Date(r.ts).toLocaleDateString('pt-BR')}`).join('\n'),'estoque_'+fmtDate(new Date()));
 }
 async function exportarCSVValidade(){
-  if(!contagemDetalheId)return;const itens=await dbGetByIndex('itens','contagemId',contagemDetalheId);
+  if(!contagemDetalheId)return;
+  const itens=await sbGetByFK('itens','contagem_id',contagemDetalheId);
   const g={};itens.forEach(i=>{if(!g[i.ean])g[i.ean]={...i,qtd:0,validades:[]};g[i.ean].qtd+=i.qtd;if(i.validade)g[i.ean].validades.push(i.validade);});
   let csv='nome,ean,validade,qtd\n';
-  Object.values(g).forEach(r=>{const v=[...new Set(r.validades)];const e=r.semEan?'':r.ean;(v.length?v:['N/A']).forEach(x=>{csv+=`"${r.nome||''}",${e},${x},${r.qtd}\n`;});});
+  Object.values(g).forEach(r=>{const v=[...new Set(r.validades)];const e=r.sem_ean?'':r.ean;(v.length?v:['N/A']).forEach(x=>{csv+=`"${r.nome||''}",${e},${x},${r.qtd}\n`;});});
   downloadCSV(csv,'validades_'+fmtDate(new Date()));
 }
 
+// ===== PRODUTOS =====
 async function renderProdutos(){
-  const prods=await dbGetAll('produtos');
   const q=(document.getElementById('prod-search')?.value||'').toLowerCase();
-  const f=prods.filter(p=>!q||(p.ean+p.nome+(p.idExterno||'')).toLowerCase().includes(q));
-  document.getElementById('prod-count').textContent=prods.length;
-  document.getElementById('produtos-lista').innerHTML=f.length?`<table class="tbl"><thead><tr><th>EAN</th><th>Nome</th><th>ID Ext.</th><th>Qtd</th><th></th></tr></thead><tbody>${f.map(p=>`<tr><td style="font-size:11px">${p.ean.startsWith('SEM-EAN-')?'<span class="sem-ean-tag">sem EAN</span>':p.ean}</td><td>${p.nome}</td><td>${p.idExterno||'—'}</td><td>${p.qtdRef||0}</td><td><button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="deletarProduto('${p.ean}')">✕</button></td></tr>`).join('')}</tbody></table>`:'<div class="text-muted" style="padding:1rem">Nenhum produto.</div>';
+  if(!produtosCache.length||!q){
+    try{
+      setSyncStatus('syncing','Carregando produtos...');
+      const{data}=await sb.from('produtos').select('*').order('nome');
+      produtosCache=data||[];
+      setSyncStatus('ok','Conectado');
+    }catch(e){setSyncStatus('error','Erro: '+e.message);return;}
+  }
+  const f=q?produtosCache.filter(p=>(p.ean+p.nome+(p.id_externo||'')).toLowerCase().includes(q)):produtosCache;
+  document.getElementById('prod-count').textContent=produtosCache.length;
+  document.getElementById('produtos-lista').innerHTML=f.length?`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>EAN</th><th>Nome</th><th>ID Ext.</th><th>Qtd</th><th></th></tr></thead><tbody>${f.slice(0,100).map(p=>`<tr><td style="font-size:11px">${p.ean.startsWith('SEM-EAN-')?'<span class="sem-ean-tag">sem EAN</span>':p.ean}</td><td>${p.nome}</td><td>${p.id_externo||'—'}</td><td>${p.qtd_ref||0}</td><td><button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="deletarProduto('${p.ean.replace(/'/g,"\\'")}')">✕</button></td></tr>`).join('')}</tbody></table></div>${f.length>100?`<div class="text-muted" style="padding:.75rem">Mostrando 100 de ${f.length}. Refine a busca para ver mais.</div>`:''}`:'<div class="text-muted" style="padding:1rem">Nenhum produto.</div>';
 }
+
 async function salvarProduto(){
   const eanInput=document.getElementById('prod-ean').value.trim();
   const nome=document.getElementById('prod-nome').value.trim();
   if(!nome){showAlert('prod-alert','Preencha o Nome.','error');return;}
   const ean=eanInput||gerarEanInterno(nome);
-  await dbPut('produtos',{ean,nome,idExterno:document.getElementById('prod-id').value.trim(),qtdRef:parseInt(document.getElementById('prod-qtd').value)||0});
-  ['prod-ean','prod-nome','prod-id','prod-qtd'].forEach(id=>document.getElementById(id).value='');
-  showAlert('prod-alert','Produto salvo!'+(eanInput?'':' (EAN interno gerado)'),'success');renderProdutos();
+  try{
+    await sbUpsert('produtos',{ean,nome,id_externo:document.getElementById('prod-id').value.trim(),qtd_ref:parseInt(document.getElementById('prod-qtd').value)||0});
+    ['prod-ean','prod-nome','prod-id','prod-qtd'].forEach(id=>document.getElementById(id).value='');
+    produtosCache=[];
+    showAlert('prod-alert','Produto salvo!'+(eanInput?'':' (EAN interno gerado)'),'success');
+    renderProdutos();
+  }catch(e){showAlert('prod-alert','Erro: '+e.message,'error');}
 }
-async function deletarProduto(ean){if(!confirm('Remover?'))return;await dbDelete('produtos',ean);renderProdutos();}
 
+async function deletarProduto(ean){
+  if(!confirm('Remover produto?'))return;
+  await sbDelete('produtos','ean',ean);
+  produtosCache=[];renderProdutos();
+}
+
+// ===== IMPORTAR CSV =====
 let csvData=[];
 function previewCSV(){
   const file=document.getElementById('csv-file').files[0];if(!file)return;
-  // tenta latin-1 primeiro (formato do sistema), fallback UTF-8
   const tryParse=(text)=>{
     const lines=text.trim().split(/\r?\n/);if(lines.length<2)return null;
-    // detecta separador: ponto e vírgula ou vírgula
     const sep=lines[0].includes(';')?';':',';
     const h=lines[0].split(sep).map(x=>x.trim().toLowerCase().replace(/"/g,'').replace(/\s+/g,' '));
-    // aceita variações: 'ean','código','cod', 'nome','descricao', 'id','código interno'
     const ei=h.findIndex(x=>x.startsWith('ean')||x==='cod'||x.startsWith('c\u00f3d'));
     const ni=h.findIndex(x=>x.startsWith('nome')||x.startsWith('descri'));
     const ii=h.findIndex(x=>x==='id'||x.startsWith('id '));
@@ -717,50 +802,70 @@ function previewCSV(){
       const nomeVal=ni>=0?c[ni]||'':'';
       const idVal=ii>=0?c[ii]||'':'';
       const qtdVal=qi>=0?parseInt(c[qi])||0:0;
-      // trata "Sem Código" e similares como sem EAN
       const semCodigo=!eanVal||eanVal.toLowerCase().includes('sem')||eanVal.toLowerCase().includes('s/c');
       if(semCodigo)eanVal='';
       const nome=nomeVal||eanVal;if(!nome&&!eanVal)continue;
       const ean=eanVal||gerarEanInterno(nome||idVal||String(i));
-      data.push({ean,nome,idExterno:idVal,qtdRef:qtdVal});
+      data.push({ean,nome,id_externo:idVal,qtd_ref:qtdVal});
     }
     return data;
   };
   const reader=new FileReader();
   reader.onload=e=>{
     let result=tryParse(e.target.result);
-    if(!result||result.length===0){
-      // tenta re-ler como latin-1
+    if(!result||!result.length){
       const r2=new FileReader();
-      r2.onload=e2=>{
-        result=tryParse(e2.target.result);
-        if(!result||result.length===0){showAlert('csv-alert','Não foi possível ler o CSV. Verifique o formato.','error');return;}
-        csvData=result;mostrarPreview();
-      };
-      r2.readAsText(file,'latin-1');
-      return;
+      r2.onload=e2=>{result=tryParse(e2.target.result);if(!result||!result.length){showAlert('csv-alert','Não foi possível ler o CSV.','error');return;}csvData=result;mostrarPreview();};
+      r2.readAsText(file,'latin-1');return;
     }
     csvData=result;mostrarPreview();
   };
   reader.readAsText(file,'latin-1');
 }
 function mostrarPreview(){
-  document.getElementById('csv-preview').innerHTML=`<div class="alert alert-info">${csvData.length} produto(s) encontrado(s).</div><table class="tbl"><thead><tr><th>EAN</th><th>Nome</th><th>ID</th></tr></thead><tbody>${csvData.slice(0,8).map(r=>`<tr><td style="font-size:11px">${r.ean.startsWith('SEM-EAN-')?'<span class="sem-ean-tag">sem EAN</span>':r.ean}</td><td>${r.nome}</td><td>${r.idExterno||'—'}</td></tr>`).join('')}</tbody></table>${csvData.length>8?`<div class="text-muted" style="padding:.5rem">...e mais ${csvData.length-8} produto(s)</div>`:''}`;
+  document.getElementById('csv-preview').innerHTML=`
+    <div class="alert alert-info">${csvData.length} produto(s) encontrado(s).</div>
+    <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>EAN</th><th>Nome</th><th>ID</th></tr></thead><tbody>
+    ${csvData.slice(0,8).map(r=>`<tr><td style="font-size:11px">${r.ean.startsWith('SEM-EAN-')?'<span class="sem-ean-tag">sem EAN</span>':r.ean}</td><td>${r.nome}</td><td>${r.id_externo||'—'}</td></tr>`).join('')}
+    </tbody></table></div>${csvData.length>8?`<div class="text-muted" style="padding:.5rem">...e mais ${csvData.length-8} produto(s)</div>`:''}`;
   document.getElementById('csv-import-btn-wrap').style.display='block';
 }
+
 async function importarCSV(){
-  for(const p of csvData)await dbPut('produtos',p);
-  showAlert('csv-alert',`${csvData.length} produto(s) importados!`,'success');
+  if(!csvData.length)return;
+  const btn=document.getElementById('csv-import-btn');
+  btn.disabled=true;
+  const total=csvData.length;
+  let ok=0,erros=0;
+  // envia em lotes de 500
+  const BATCH=500;
+  setSyncStatus('syncing',`Importando 0/${total}...`);
+  for(let i=0;i<csvData.length;i+=BATCH){
+    const lote=csvData.slice(i,i+BATCH);
+    try{
+      const{error}=await sb.from('produtos').upsert(lote,{onConflict:'ean'});
+      if(error){erros+=lote.length;}else{ok+=lote.length;}
+    }catch(e){erros+=lote.length;}
+    setSyncStatus('syncing',`Importando ${Math.min(i+BATCH,total)}/${total}...`);
+    btn.innerHTML=`<span class="loading"></span>${Math.min(i+BATCH,total)}/${total}`;
+  }
+  setSyncStatus('ok','Conectado');
+  btn.disabled=false;btn.innerHTML='📥 Importar';
+  produtosCache=[];
+  if(erros)showAlert('csv-alert',`${ok} importados, ${erros} com erro.`,'warn');
+  else showAlert('csv-alert',`${ok} produto(s) importados com sucesso!`,'success');
   csvData=[];document.getElementById('csv-file').value='';document.getElementById('csv-preview').innerHTML='';document.getElementById('csv-import-btn-wrap').style.display='none';
 }
 
-function showAlert(id,msg,type){const el=document.getElementById(id);el.innerHTML=`<div class="alert alert-${type}">${msg}</div>`;setTimeout(()=>el.innerHTML='',4000);}
+function showAlert(id,msg,type){const el=document.getElementById(id);el.innerHTML=`<div class="alert alert-${type}">${msg}</div>`;setTimeout(()=>el.innerHTML='',6000);}
 const fmtDate=d=>d.toISOString().slice(0,10);
 function downloadCSV(content,filename){
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+content],{type:'text/csv;charset=utf-8;'}));a.download=filename+'.csv';a.click();
 }
 
-initDB().then(renderHome);
+// ===== INIT =====
+setSyncStatus('syncing','Conectando...');
+renderHome();
 </script>
 </body>
 </html>
