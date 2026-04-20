@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EstoqueApp</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0f1117;--bg2:#181b24;--bg3:#1e2130;--bg4:#252a3a;
+    --accent:#4f8ef7;--accent2:#3d6fd4;--green:#2ecc71;--red:#e74c3c;
+    --amber:#f39c12;--text:#e8eaf0;--text2:#9ca3b8;--border:#2a2f45;
+    --radius:10px;--font:'Outfit',system-ui,sans-serif;
+  }
+  body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;overflow-x:hidden}
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+  nav{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 1rem;display:flex;align-items:center;position:sticky;top:0;z-index:100;overflow-x:auto}
+  .nav-logo{font-weight:700;font-size:17px;color:var(--accent);padding:14px 16px 14px 0;white-space:nowrap;border-right:1px solid var(--border);margin-right:8px}
+  .nav-btn{background:none;border:none;color:var(--text2);padding:14px 12px;cursor:pointer;font-size:13px;font-family:var(--font);white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s}
+  .nav-btn:hover{color:var(--text)}
+  .nav-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .page{display:none;padding:1.5rem;max-width:900px;margin:0 auto}
+  .page.active{display:block}
+  .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1rem}
+  .card-title{font-size:15px;font-weight:600;margin-bottom:1rem}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;border:none;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:500;transition:all .2s}
+  .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
+  .btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:#c0392b}
+  .btn-ghost{background:var(--bg3);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:var(--bg4)}
+  input,select{background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font);font-size:14px;padding:9px 12px;width:100%;outline:none;transition:border .2s}
+  input:focus,select:focus{border-color:var(--accent)}
+  label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block}
+  .form-group{margin-bottom:.9rem}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+  .badge-green{background:#1a3d2a;color:var(--green)}
+  .badge-amber{background:#3d2f0a;color:var(--amber)}
+  .badge-blue{background:#1a2a3d;color:var(--accent)}
+  .tbl{width:100%;border-collapse:collapse;font-size:13px}
+  .tbl th{padding:8px 12px;text-align:left;color:var(--text2);font-weight:500;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+  .tbl td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.04)}
+  .tbl tr:hover td{background:var(--bg3)}
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center;padding:1rem}
+  .modal-bg.open{display:flex}
+  .modal{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:1.5rem;width:100%;max-width:420px;max-height:90vh;overflow-y:auto}
+  .modal h3{font-size:16px;font-weight:600;margin-bottom:1rem}
+  .modal-actions{display:flex;gap:8px;margin-top:1rem;justify-content:flex-end}
+  .alert{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:1rem}
+  .alert-success{background:#1a3d2a;color:var(--green);border:1px solid #2ecc7140}
+  .alert-error{background:#3d1a1a;color:var(--red);border:1px solid #e74c3c40}
+  .alert-info{background:#1a2a3d;color:var(--accent);border:1px solid #4f8ef740}
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:1rem}
+  .stat-card{background:var(--bg3);border-radius:var(--radius);padding:1rem;text-align:center}
+  .stat-val{font-size:24px;font-weight:700;color:var(--accent)}
+  .stat-lbl{font-size:11px;color:var(--text2);margin-top:2px}
+  .section-title{font-size:20px;font-weight:700;margin-bottom:1.5rem}
+  .text-muted{color:var(--text2);font-size:13px}
+  .divider{border:none;border-top:1px solid var(--border);margin:1rem 0}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row .form-group{flex:1;min-width:140px}
+  .checkbox-row{display:flex;align-items:center;gap:8px;margin-bottom:.5rem}
+  .checkbox-row input[type=checkbox]{width:auto;cursor:pointer}
+  .checkbox-row label{margin:0;cursor:pointer;font-size:13px;color:var(--text)}
+  .empty-state{text-align:center;padding:3rem 1rem;color:var(--text2)}
+  .empty-state .big{font-size:40px;margin-bottom:.5rem}
+  .item-count{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05);gap:8px}
+  .item-count:last-child{border-bottom:none}
+  .item-info{flex:1;min-width:0}
+  .item-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item-ean{font-size:11px;color:var(--text2)}
+  .qty-display{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 14px;font-weight:600;font-size:15px;min-width:50px;text-align:center}
+  .count-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1rem}
+  .count-badge{background:#1a2a3d;border:1px solid var(--accent);color:var(--accent);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
+  .tab-bar{display:flex;gap:4px;background:var(--bg3);border-radius:8px;padding:4px;margin-bottom:1rem}
+  .tab-btn{flex:1;padding:7px;border:none;background:none;color:var(--text2);font-family:var(--font);font-size:13px;border-radius:6px;cursor:pointer;transition:all .2s}
+  .tab-btn.active{background:var(--bg2);color:var(--text);font-weight:500}
+  .tab-content{display:none}.tab-content.active{display:block}
+  .search-results{background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-top:4px;overflow:hidden;max-height:220px;overflow-y:auto}
+  .search-item{padding:10px 14px;cursor:pointer;transition:background .15s;border-bottom:1px solid rgba(255,255,255,.04)}
+  .search-item:last-child{border-bottom:none}
+  .search-item:hover,.search-item:active{background:var(--bg4)}
+  .search-item-name{font-size:13px;font-weight:500}
+  .search-item-ean{font-size:11px;color:var(--text2);margin-top:1px}
+  .sem-ean-tag{background:#3d2f0a;color:var(--amber);border:1px solid #f39c1240;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+  .no-results{padding:10px 14px;color:var(--text2);font-size:13px}
+  #scanner-wrap{position:relative;width:100%;background:#000;border-radius:10px;overflow:hidden;min-height:280px;display:flex;align-items:center;justify-content:center}
+  #scanner-video{width:100%;display:block;object-fit:cover}
+  #scanner-canvas{display:none}
+  .scanner-frame{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:72%;height:38%;pointer-events:none}
+  .scanner-frame::before,.scanner-frame::after{content:'';position:absolute;width:22px;height:22px;border-color:var(--accent);border-style:solid}
+  .scanner-frame::before{top:0;left:0;border-width:3px 0 0 3px;border-radius:4px 0 0 0}
+  .scanner-frame::after{bottom:0;right:0;border-width:0 3px 3px 0;border-radius:0 0 4px 0}
+  .sf-tr,.sf-bl{position:absolute;width:22px;height:22px;border-color:var(--accent);border-style:solid}
+  .sf-tr{top:0;right:0;border-width:3px 3px 0 0;border-radius:0 4px 0 0}
+  .sf-bl{bottom:0;left:0;border-width:0 0 3px 3px;border-radius:0 0 0 4px}
+  .scan-laser{position:absolute;left:14%;right:14%;height:2px;background:var(--accent);opacity:.85;animation:laser 1.8s ease-in-out infinite;top:50%}
+  @keyframes laser{0%,100%{transform:translateY(-60px);opacity:.4}50%{transform:translateY(60px);opacity:1}}
+  #scan-status{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:12px;color:rgba(255,255,255,.8);padding:0 10px;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+  #scan-detected{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:5px 16px;border-radius:20px;font-weight:600;font-size:13px;display:none;white-space:nowrap}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">📦 EstoqueApp</div>
+  <button class="nav-btn active" onclick="showPage('home')">Início</button>
+  <button class="nav-btn" onclick="showPage('contagem')">Contagem</button>
+  <button class="nav-btn" onclick="showPage('historico')">Histórico</button>
+  <button class="nav-btn" onclick="showPage('relatorios')">Relatórios</button>
+  <button class="nav-btn" onclick="showPage('produtos')">Produtos</button>
+  <button class="nav-btn" onclick="showPage('importar')">Importar CSV</button>
+</nav>
+
+<div class="page active" id="page-home">
+  <div class="section-title">Painel</div>
+  <div class="stats-grid" id="stats-home"></div>
+  <div class="card">
+    <div class="card-title">Ações Rápidas</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="iniciarContagem()">▶ Nova Contagem</button>
+      <button class="btn btn-ghost" onclick="showPage('relatorios')">📊 Relatórios</button>
+      <button class="btn btn-ghost" onclick="showPage('importar')">📥 Importar CSV</button>
+    </div>
+  </div>
+  <div class="card" id="contagem-ativa-home" style="display:none">
+    <div class="card-title" style="color:var(--accent)">⚡ Contagem em Andamento</div>
+    <div id="home-count-info"></div>
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="showPage('contagem')">Continuar</button>
+      <button class="btn btn-danger" onclick="encerrarContagem()">Encerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-contagem">
+  <div class="section-title">Contagem de Estoque</div>
+  <div id="no-contagem">
+    <div class="empty-state">
+      <div class="big">📋</div>
+      <div style="font-size:15px;margin-bottom:1rem">Nenhuma contagem ativa</div>
+      <button class="btn btn-primary" onclick="iniciarContagem()">▶ Iniciar Nova Contagem</button>
+    </div>
+  </div>
+  <div id="contagem-ativa" style="display:none">
+    <div class="count-header">
+      <div>
+        <div class="count-badge" id="count-badge">Contagem #0</div>
+        <div class="text-muted" style="margin-top:4px;font-size:12px" id="count-info-date"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost" onclick="abrirScanner()">📷 Escanear</button>
+        <button class="btn btn-ghost" onclick="abrirInserir()">⌨ Inserir</button>
+        <button class="btn btn-danger" onclick="encerrarContagem()">✓ Encerrar</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Itens <span id="count-total-items" class="badge badge-blue">0</span></div>
+      <div id="count-items-list"><div class="empty-state" style="padding:1.5rem"><div>Nenhum item ainda.</div></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-historico">
+  <div class="section-title">Histórico de Contagens</div>
+  <div id="historico-list"></div>
+</div>
+
+<div class="page" id="page-relatorios">
+  <div class="section-title">Relatórios</div>
+  <div class="card">
+    <div class="card-title">📊 Consolidado — Últimas Contagens</div>
+    <div class="text-muted" style="margin-bottom:1rem">Última contagem de cada produto, considerando contagens parceladas.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem">
+      <button class="btn btn-primary" onclick="gerarConsolidado()">Gerar</button>
+      <button class="btn btn-ghost" onclick="exportarConsolidadoCSV()">⬇ CSV Estoque</button>
+      <button class="btn btn-ghost" onclick="exportarValidadeCSV()">⬇ CSV Validades</button>
+    </div>
+    <div id="consolidado-resultado"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📅 Por Contagem</div>
+    <div class="form-group">
+      <label>Selecionar Contagem</label>
+      <select id="select-contagem-rel" onchange="gerarRelatorioContagem()"><option value="">— selecione —</option></select>
+    </div>
+    <div id="rel-contagem-resultado"></div>
+  </div>
+</div>
+
+<div class="page" id="page-produtos">
+  <div class="section-title">Cadastro de Produtos</div>
+  <div class="card">
+    <div class="card-title">Adicionar Produto</div>
+    <div class="row">
+      <div class="form-group"><label>EAN <span style="color:var(--text2)">(opcional)</span></label><input id="prod-ean" placeholder="Deixe em branco se não tiver"></div>
+      <div class="form-group"><label>Nome do Produto</label><input id="prod-nome" placeholder="Ex: Arroz Tio João 5kg"></div>
+    </div>
+    <div class="row">
+      <div class="form-group"><label>ID Externo</label><input id="prod-id" placeholder="ID do outro sistema"></div>
+      <div class="form-group"><label>Qtd Referência</label><input id="prod-qtd" type="number" placeholder="0"></div>
+    </div>
+    <button class="btn btn-primary" onclick="salvarProduto()">Salvar</button>
+    <div id="prod-alert" style="margin-top:10px"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Produtos <span id="prod-count" class="badge badge-blue">0</span></div>
+    <div style="margin-bottom:.75rem"><input id="prod-search" placeholder="Buscar..." oninput="renderProdutos()"></div>
+    <div id="produtos-lista"></div>
+  </div>
+</div>
+
+<div class="page" id="page-importar">
+  <div class="section-title">Importar via CSV</div>
+  <div class="card">
+    <div class="card-title">Formato</div>
+    <div class="text-muted" style="margin-bottom:.5rem">Coluna <b>nome</b> obrigatória. <b>ean</b> opcional.</div>
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 14px;font-family:monospace;font-size:13px;color:var(--text2)">ean, nome, id, qtd</div>
+  </div>
+  <div class="card">
+    <div class="form-group"><label>Arquivo CSV</label><input type="file" id="csv-file" accept=".csv" onchange="previewCSV()" style="cursor:pointer"></div>
+    <div id="csv-preview"></div>
+    <div style="margin-top:10px;display:none" id="csv-import-btn-wrap">
+      <button class="btn btn-primary" onclick="importarCSV()">📥 Importar</button>
+    </div>
+    <div id="csv-alert" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- MODAL SCANNER -->
+<div class="modal-bg" id="modal-scanner">
+  <div class="modal" style="max-width:460px;padding:1.25rem">
+    <h3 style="margin-bottom:.75rem">Scanner</h3>
+    <div id="scanner-wrap">
+      <video id="scanner-video" autoplay playsinline muted></video>
+      <canvas id="scanner-canvas"></canvas>
+      <div class="scanner-frame"><div class="sf-tr"></div><div class="sf-bl"></div></div>
+      <div class="scan-laser"></div>
+      <div id="scan-status">Iniciando câmera...</div>
+      <div id="scan-detected">✓ Lido!</div>
+    </div>
+    <div id="scanner-error" style="display:none;margin-top:.75rem"></div>
+    <div style="margin-top:1rem">
+      <div class="text-muted" style="font-size:12px;margin-bottom:.5rem">Ou insira o código manualmente:</div>
+      <div style="display:flex;gap:8px">
+        <input id="manual-ean-scanner" placeholder="Código EAN..." onkeydown="if(event.key==='Enter')submitManualScanner()">
+        <button class="btn btn-ghost" onclick="submitManualScanner()">OK</button>
+      </div>
+    </div>
+    <div style="margin-top:.75rem;display:flex;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="pararScanner()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL INSERIR -->
+<div class="modal-bg" id="modal-inserir">
+  <div class="modal" style="max-width:460px">
+    <h3>Inserir Produto</h3>
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-ean-btn" onclick="switchTab('ean')">Por EAN</button>
+      <button class="tab-btn" id="tab-nome-btn" onclick="switchTab('nome')">Busca por Nome</button>
+    </div>
+    <div class="tab-content active" id="tab-ean">
+      <div class="form-group">
+        <label>EAN / Código de Barras</label>
+        <input id="manual-ean" placeholder="Ex: 7891234567890" onkeydown="if(event.key==='Enter')confirmarManualEAN()">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="fecharModal('modal-inserir')">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmarManualEAN()">Buscar</button>
+      </div>
+    </div>
+    <div class="tab-content" id="tab-nome">
+      <div class="form-group">
+        <label>Nome do produto</label>
+        <input id="busca-nome" placeholder="Digite o nome..." oninput="buscarPorNome()" autocomplete="off">
+        <div id="nome-results" style="display:none" class="search-results"></div>
+      </div>
+      <div id="produto-selecionado-nome" style="display:none;margin-bottom:.75rem">
+        <div style="background:var(--bg3);border-radius:8px;padding:10px 14px;border:1px solid var(--accent)">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:2px">Selecionado</div>
+          <div style="font-weight:600" id="sel-nome-display"></div>
+          <div style="font-size:12px;color:var(--text2)" id="sel-ean-display"></div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="fecharModal('modal-inserir')">Cancelar</button>
+        <button class="btn btn-primary" id="btn-confirmar-nome" onclick="confirmarSelecionadoNome()" disabled>Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL QTD -->
+<div class="modal-bg" id="modal-qtd">
+  <div class="modal">
+    <h3>Quantidade</h3>
+    <div id="modal-produto-info" style="margin-bottom:1rem"></div>
+    <div class="form-group">
+      <label>Quantidade</label>
+      <input type="number" id="modal-qtd-input" min="1" value="1" onkeydown="if(event.key==='Enter')confirmarQtd()">
+    </div>
+    <hr class="divider">
+    <div style="margin-bottom:.5rem;font-size:13px;font-weight:500">Data de Validade</div>
+    <div class="checkbox-row" style="margin-bottom:.75rem">
+      <input type="checkbox" id="nao-relevante" onchange="toggleValidade()">
+      <label for="nao-relevante">Não relevante (sem data de validade)</label>
+    </div>
+    <div id="validade-field" class="form-group">
+      <label>Data de Validade (dd/mm/aaaa)</label>
+      <input type="text" id="modal-validade" placeholder="31/12/2025" maxlength="10" oninput="formatarData(this)">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-qtd')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarQtd()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALHE -->
+<div class="modal-bg" id="modal-detalhe">
+  <div class="modal" style="max-width:600px">
+    <h3 id="detalhe-title"></h3>
+    <div id="detalhe-content"></div>
+    <div style="margin-top:1rem;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="exportarCSVContagem()">⬇ CSV Estoque</button>
+      <button class="btn btn-ghost" onclick="exportarCSVValidade()">⬇ CSV Validades</button>
+      <button class="btn btn-ghost" onclick="fecharModal('modal-detalhe')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let db,currentContagemId=null,eanAtual=null,contagemDetalheId=null,produtoSelecionadoNome=null;
+
+function initDB(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open('EstoqueDB',4);
+    r.onupgradeneeded=e=>{
+      const d=e.target.result;
+      if(!d.objectStoreNames.contains('produtos'))d.createObjectStore('produtos',{keyPath:'ean'});
+      if(!d.objectStoreNames.contains('contagens'))d.createObjectStore('contagens',{keyPath:'id',autoIncrement:true});
+      if(!d.objectStoreNames.contains('itens')){
+        const s=d.createObjectStore('itens',{keyPath:'id',autoIncrement:true});
+        s.createIndex('contagemId','contagemId',{unique:false});
+        s.createIndex('ean','ean',{unique:false});
+      }
+    };
+    r.onsuccess=e=>{db=e.target.result;res()};
+    r.onerror=rej;
+  });
+}
+const dbGet=(s,k)=>new Promise((r,j)=>{const t=db.transaction(s,'readonly');const q=t.objectStore(s).get(k);q.onsuccess=()=>r(q.result);q.onerror=j});
+const dbPut=(s,v)=>new Promise((r,j)=>{const t=db.transaction(s,'readwrite');const q=t.objectStore(s).put(v);q.onsuccess=()=>r(q.result);q.onerror=j});
+const dbAdd=(s,v)=>new Promise((r,j)=>{const t=db.transaction(s,'readwrite');const q=t.objectStore(s).add(v);q.onsuccess=()=>r(q.result);q.onerror=j});
+const dbGetAll=(s)=>new Promise((r,j)=>{const t=db.transaction(s,'readonly');const q=t.objectStore(s).getAll();q.onsuccess=()=>r(q.result);q.onerror=j});
+const dbGetByIndex=(s,i,v)=>new Promise((r,j)=>{const t=db.transaction(s,'readonly');const q=t.objectStore(s).index(i).getAll(v);q.onsuccess=()=>r(q.result);q.onerror=j});
+const dbDelete=(s,k)=>new Promise((r,j)=>{const t=db.transaction(s,'readwrite');const q=t.objectStore(s).delete(k);q.onsuccess=()=>r(q.result);q.onerror=j});
+const gerarEanInterno=nome=>'SEM-EAN-'+nome.toUpperCase().replace(/\s+/g,'-').slice(0,20)+'-'+Date.now().toString(36).slice(-4);
+
+// ===== SCANNER =====
+let scannerStream=null,scannerRAF=null,scannerActive=false;
+
+async function abrirScanner(){
+  document.getElementById('modal-scanner').classList.add('open');
+  document.getElementById('scan-status').textContent='Iniciando câmera...';
+  document.getElementById('scan-detected').style.display='none';
+  document.getElementById('scanner-error').style.display='none';
+  document.getElementById('manual-ean-scanner').value='';
+  scannerActive=true;
+  await iniciarCamera();
+}
+
+async function iniciarCamera(){
+  const video=document.getElementById('scanner-video');
+  const errEl=document.getElementById('scanner-error');
+  try{
+    scannerStream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}
+    });
+    video.srcObject=scannerStream;
+    await video.play();
+    document.getElementById('scan-status').textContent='Aponte para o código de barras';
+    iniciarDeteccao();
+  }catch(e){
+    try{
+      scannerStream=await navigator.mediaDevices.getUserMedia({video:true});
+      video.srcObject=scannerStream;
+      await video.play();
+      document.getElementById('scan-status').textContent='Aponte para o código de barras';
+      iniciarDeteccao();
+    }catch(e2){
+      errEl.style.display='block';
+      errEl.innerHTML=`<div class="alert alert-error">Não foi possível acessar a câmera.<br><small>${e2.message}</small><br><br>Dicas: abra o arquivo pelo Chrome, verifique permissões em Configurações > Privacidade > Câmera.</div>`;
+      document.getElementById('scan-status').textContent='Erro';
+    }
+  }
+}
+
+function iniciarDeteccao(){
+  if('BarcodeDetector' in window){
+    BarcodeDetector.getSupportedFormats().then(formats=>{
+      const detector=new BarcodeDetector({formats});
+      loopDetector(detector);
+    });
+  } else {
+    document.getElementById('scanner-error').style.display='block';
+    document.getElementById('scanner-error').innerHTML='<div class="alert alert-info">Detecção automática não disponível neste navegador. Use a entrada manual abaixo ou atualize o Chrome.</div>';
+    document.getElementById('scan-status').textContent='Câmera ativa';
+  }
+}
+
+function loopDetector(detector){
+  if(!scannerActive)return;
+  const video=document.getElementById('scanner-video');
+  if(video.readyState<2){scannerRAF=requestAnimationFrame(()=>loopDetector(detector));return;}
+  detector.detect(video).then(barcodes=>{
+    if(barcodes&&barcodes.length>0){
+      const code=barcodes[0].rawValue;
+      if(code){
+        try{navigator.vibrate&&navigator.vibrate(100);}catch(e){}
+        document.getElementById('scan-detected').textContent='✓ '+code;
+        document.getElementById('scan-detected').style.display='block';
+        setTimeout(()=>{pararScanner();processarEAN(code);},600);
+        return;
+      }
+    }
+    scannerRAF=requestAnimationFrame(()=>loopDetector(detector));
+  }).catch(()=>{
+    scannerRAF=requestAnimationFrame(()=>loopDetector(detector));
+  });
+}
+
+function pararScanner(){
+  scannerActive=false;
+  if(scannerRAF){cancelAnimationFrame(scannerRAF);scannerRAF=null;}
+  if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop());scannerStream=null;}
+  document.getElementById('scanner-video').srcObject=null;
+  fecharModal('modal-scanner');
+}
+
+function submitManualScanner(){
+  const v=document.getElementById('manual-ean-scanner').value.trim();
+  if(!v)return;
+  pararScanner();processarEAN(v);
+}
+
+// ===== INSERIR =====
+function abrirInserir(){
+  switchTab('ean');
+  document.getElementById('manual-ean').value='';
+  document.getElementById('busca-nome').value='';
+  document.getElementById('nome-results').style.display='none';
+  document.getElementById('produto-selecionado-nome').style.display='none';
+  document.getElementById('btn-confirmar-nome').disabled=true;
+  produtoSelecionadoNome=null;
+  document.getElementById('modal-inserir').classList.add('open');
+  setTimeout(()=>document.getElementById('manual-ean').focus(),150);
+}
+function switchTab(t){
+  ['ean','nome'].forEach(x=>{
+    document.getElementById('tab-'+x).classList.toggle('active',x===t);
+    document.getElementById('tab-'+x+'-btn').classList.toggle('active',x===t);
+  });
+  if(t==='nome')setTimeout(()=>document.getElementById('busca-nome').focus(),100);
+  else setTimeout(()=>document.getElementById('manual-ean').focus(),100);
+}
+function confirmarManualEAN(){
+  const v=document.getElementById('manual-ean').value.trim();
+  if(!v)return;
+  fecharModal('modal-inserir');processarEAN(v);
+}
+async function buscarPorNome(){
+  const q=document.getElementById('busca-nome').value.trim().toLowerCase();
+  const el=document.getElementById('nome-results');
+  document.getElementById('produto-selecionado-nome').style.display='none';
+  document.getElementById('btn-confirmar-nome').disabled=true;
+  produtoSelecionadoNome=null;
+  if(q.length<2){el.style.display='none';return;}
+  const prods=await dbGetAll('produtos');
+  const matches=prods.filter(p=>p.nome.toLowerCase().includes(q)).slice(0,10);
+  el.style.display='block';
+  el.innerHTML=matches.length?matches.map(p=>`
+    <div class="search-item" onclick="selecionarProdutoNome('${p.ean}')">
+      <div class="search-item-name">${p.nome}</div>
+      <div class="search-item-ean">${p.ean.startsWith('SEM-EAN-')?'<span class="sem-ean-tag">sem EAN</span>':p.ean}</div>
+    </div>`).join(''):'<div class="no-results">Nenhum produto encontrado.</div>';
+}
+async function selecionarProdutoNome(ean){
+  const p=await dbGet('produtos',ean);if(!p)return;
+  produtoSelecionadoNome=p;
+  document.getElementById('nome-results').style.display='none';
+  document.getElementById('busca-nome').value=p.nome;
+  document.getElementById('produto-selecionado-nome').style.display='block';
+  document.getElementById('sel-nome-display').textContent=p.nome;
+  document.getElementById('sel-ean-display').textContent=p.ean.startsWith('SEM-EAN-')?'Sem código de barras':'EAN: '+p.ean;
+  document.getElementById('btn-confirmar-nome').disabled=false;
+}
+function confirmarSelecionadoNome(){
+  if(!produtoSelecionadoNome)return;
+  fecharModal('modal-inserir');processarEAN(produtoSelecionadoNome.ean);
+}
+
+async function processarEAN(ean){
+  eanAtual=ean;
+  const prod=await dbGet('produtos',ean);
+  const semEan=ean.startsWith('SEM-EAN-');
+  document.getElementById('modal-produto-info').innerHTML=`
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 14px">
+      ${semEan?'<div class="sem-ean-tag" style="margin-bottom:4px">sem EAN</div>':`<div style="font-size:20px;font-weight:700;letter-spacing:2px;color:var(--accent)">${ean}</div>`}
+      <div style="font-size:14px;color:var(--text2);margin-top:2px">${prod?.nome||'Produto não cadastrado'}</div>
+    </div>`;
+  document.getElementById('modal-qtd-input').value=1;
+  document.getElementById('nao-relevante').checked=false;
+  document.getElementById('modal-validade').value='';
+  document.getElementById('validade-field').style.display='block';
+  document.getElementById('modal-qtd').classList.add('open');
+  setTimeout(()=>document.getElementById('modal-qtd-input').focus(),150);
+}
+function toggleValidade(){document.getElementById('validade-field').style.display=document.getElementById('nao-relevante').checked?'none':'block';}
+function formatarData(el){
+  let v=el.value.replace(/\D/g,'');
+  if(v.length>2)v=v.slice(0,2)+'/'+v.slice(2);
+  if(v.length>5)v=v.slice(0,5)+'/'+v.slice(5);
+  el.value=v;
+}
+async function confirmarQtd(){
+  const qtd=parseInt(document.getElementById('modal-qtd-input').value)||0;
+  if(qtd<=0){alert('Quantidade deve ser maior que zero.');return;}
+  const naoRel=document.getElementById('nao-relevante').checked;
+  let validade='';
+  if(!naoRel){
+    validade=document.getElementById('modal-validade').value.trim();
+    if(!validade||validade.length<10){alert('Insira a data de validade ou marque "Não relevante".');return;}
+  } else validade='N/A';
+  const prod=await dbGet('produtos',eanAtual);
+  await dbAdd('itens',{contagemId:currentContagemId,ean:eanAtual,nome:prod?.nome||'',qtd,validade,semEan:eanAtual.startsWith('SEM-EAN-'),ts:new Date().toISOString()});
+  fecharModal('modal-qtd');
+  await renderItensContagem();
+}
+function fecharModal(id){document.getElementById(id).classList.remove('open');}
+
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>{if(b.getAttribute('onclick').includes("'"+id+"'"))b.classList.add('active')});
+  if(id==='home')renderHome();
+  if(id==='historico')renderHistorico();
+  if(id==='relatorios')renderSelectContagens();
+  if(id==='produtos')renderProdutos();
+  if(id==='contagem')renderContagem();
+}
+
+async function renderHome(){
+  const [prods,conts,itens]=await Promise.all([dbGetAll('produtos'),dbGetAll('contagens'),dbGetAll('itens')]);
+  document.getElementById('stats-home').innerHTML=`
+    <div class="stat-card"><div class="stat-val">${prods.length}</div><div class="stat-lbl">Produtos</div></div>
+    <div class="stat-card"><div class="stat-val">${conts.length}</div><div class="stat-lbl">Contagens</div></div>
+    <div class="stat-card"><div class="stat-val">${itens.length}</div><div class="stat-lbl">Registros</div></div>`;
+  const ativa=document.getElementById('contagem-ativa-home');
+  if(currentContagemId){
+    ativa.style.display='block';
+    const [c,its]=await Promise.all([dbGet('contagens',currentContagemId),dbGetByIndex('itens','contagemId',currentContagemId)]);
+    document.getElementById('home-count-info').innerHTML=`<div class="text-muted">${c?.descricao} — ${its.length} item(ns)</div>`;
+  } else ativa.style.display='none';
+}
+
+async function iniciarContagem(){
+  const id=await dbAdd('contagens',{descricao:'Contagem '+new Date().toLocaleString('pt-BR'),inicio:new Date().toISOString(),fim:null,status:'ativa'});
+  currentContagemId=id;showPage('contagem');
+}
+async function renderContagem(){
+  if(!currentContagemId){document.getElementById('no-contagem').style.display='block';document.getElementById('contagem-ativa').style.display='none';return;}
+  document.getElementById('no-contagem').style.display='none';document.getElementById('contagem-ativa').style.display='block';
+  const c=await dbGet('contagens',currentContagemId);
+  document.getElementById('count-badge').textContent='Contagem #'+currentContagemId;
+  document.getElementById('count-info-date').textContent='Iniciada em '+new Date(c.inicio).toLocaleString('pt-BR');
+  await renderItensContagem();
+}
+async function renderItensContagem(){
+  const itens=await dbGetByIndex('itens','contagemId',currentContagemId);
+  document.getElementById('count-total-items').textContent=itens.length;
+  const el=document.getElementById('count-items-list');
+  if(!itens.length){el.innerHTML='<div class="empty-state" style="padding:1.5rem"><div>Nenhum item ainda.</div></div>';return;}
+  const g={};
+  itens.forEach(i=>{if(!g[i.ean])g[i.ean]={ean:i.ean,nome:i.nome,qtd:0,validades:[],semEan:i.semEan};g[i.ean].qtd+=i.qtd;if(i.validade&&i.validade!=='N/A')g[i.ean].validades.push(i.validade);});
+  el.innerHTML=Object.values(g).map(x=>`
+    <div class="item-count">
+      <div class="item-info">
+        <div class="item-name">${x.nome||'—'} ${x.semEan?'<span class="sem-ean-tag">sem EAN</span>':''}</div>
+        <div class="item-ean">${x.semEan?'sem código':x.ean}${x.validades.length?' · Val: '+[...new Set(x.validades)].join(', '):''}</div>
+      </div>
+      <div class="qty-display">${x.qtd}</div>
+    </div>`).join('');
+}
+async function encerrarContagem(){
+  if(!currentContagemId)return;
+  const its=await dbGetByIndex('itens','contagemId',currentContagemId);
+  if(!its.length&&!confirm('Nenhum item. Encerrar mesmo assim?'))return;
+  const c=await dbGet('contagens',currentContagemId);
+  await dbPut('contagens',{...c,fim:new Date().toISOString(),status:'encerrada'});
+  currentContagemId=null;showPage('historico');
+}
+
+async function renderHistorico(){
+  const conts=await dbGetAll('contagens');
+  const el=document.getElementById('historico-list');
+  if(!conts.length){el.innerHTML='<div class="empty-state"><div class="big">📭</div><div>Nenhuma contagem.</div></div>';return;}
+  el.innerHTML=[...conts].reverse().map(c=>`
+    <div class="card" style="cursor:pointer" onclick="abrirDetalhe(${c.id})">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-weight:600">${c.descricao}</div>
+          <div class="text-muted">Início: ${new Date(c.inicio).toLocaleString('pt-BR')}${c.fim?' · Fim: '+new Date(c.fim).toLocaleString('pt-BR'):''}</div>
+        </div>
+        <span class="badge ${c.status==='ativa'?'badge-amber':'badge-green'}">${c.status==='ativa'?'Em andamento':'Encerrada'}</span>
+      </div>
+    </div>`).join('');
+}
+async function abrirDetalhe(id){
+  contagemDetalheId=id;
+  const [c,itens]=await Promise.all([dbGet('contagens',id),dbGetByIndex('itens','contagemId',id)]);
+  document.getElementById('detalhe-title').textContent=c.descricao;
+  const g={};
+  itens.forEach(i=>{if(!g[i.ean])g[i.ean]={ean:i.ean,nome:i.nome,qtd:0,validades:[],semEan:i.semEan,ts:i.ts};g[i.ean].qtd+=i.qtd;if(i.validade)g[i.ean].validades.push(i.validade);});
+  const rows=Object.values(g);
+  document.getElementById('detalhe-content').innerHTML=`
+    <div class="text-muted" style="margin-bottom:.75rem">Início: ${new Date(c.inicio).toLocaleString('pt-BR')}${c.fim?' · Fim: '+new Date(c.fim).toLocaleString('pt-BR'):''}</div>
+    ${rows.length?`<table class="tbl"><thead><tr><th>EAN</th><th>Nome</th><th>Qtd</th><th>Validade(s)</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td style="font-size:11px">${r.semEan?'<span class="sem-ean-tag">sem EAN</span>':r.ean}</td><td>${r.nome||'—'}</td><td><b>${r.qtd}</b></td><td style="font-size:11px">${[...new Set(r.validades)].join('<br>')||'—'}</td></tr>`).join('')}
+    </tbody></table>`:'<div class="text-muted">Nenhum item.</div>'}`;
+  document.getElementById('modal-detalhe').classList.add('open');
+}
+
+async function renderSelectContagens(){
+  const conts=await dbGetAll('contagens');
+  document.getElementById('select-contagem-rel').innerHTML='<option value="">— selecione —</option>'+[...conts].reverse().map(c=>`<option value="${c.id}">${c.descricao} (${new Date(c.inicio).toLocaleDateString('pt-BR')})</option>`).join('');
+}
+async function gerarRelatorioContagem(){
+  const id=parseInt(document.getElementById('select-contagem-rel').value);if(!id){document.getElementById('rel-contagem-resultado').innerHTML='';return;}
+  const itens=await dbGetByIndex('itens','contagemId',id);
+  const g={};itens.forEach(i=>{if(!g[i.ean])g[i.ean]={ean:i.ean,nome:i.nome,qtd:0,validades:[],semEan:i.semEan};g[i.ean].qtd+=i.qtd;if(i.validade)g[i.ean].validades.push(i.validade);});
+  const rows=Object.values(g);
+  document.getElementById('rel-contagem-resultado').innerHTML=rows.length?`<table class="tbl"><thead><tr><th>EAN</th><th>Nome</th><th>Qtd</th><th>Validade(s)</th></tr></thead><tbody>${rows.map(r=>`<tr><td style="font-size:11px">${r.semEan?'<span class="sem-ean-tag">sem EAN</span>':r.ean}</td><td>${r.nome||'—'}</td><td><b>${r.qtd}</b></td><td style="font-size:11px">${[...new Set(r.validades)].join(', ')||'—'}</td></tr>`).join('')}</tbody></table>`:'<div class="text-muted">Nenhum item.</div>';
+}
+async function getConsolidadoData(){
+  const itens=await dbGetAll('itens');
+  const pk={};itens.forEach(i=>{const k=i.ean+'_'+i.contagemId;if(!pk[k])pk[k]={...i,qtdAcum:0,validades:[]};pk[k].qtdAcum+=i.qtd;if(i.validade)pk[k].validades.push(i.validade);});
+  const ult={};Object.values(pk).forEach(g=>{if(!ult[g.ean]||g.ts>ult[g.ean].ts)ult[g.ean]=g;});
+  return Object.values(ult);
+}
+async function gerarConsolidado(){
+  const rows=await getConsolidadoData();
+  document.getElementById('consolidado-resultado').innerHTML=rows.length?`<table class="tbl"><thead><tr><th>EAN</th><th>Nome</th><th>Qtd</th><th>Validade(s)</th><th>Última Contagem</th></tr></thead><tbody>${rows.map(r=>`<tr><td style="font-size:11px">${r.semEan?'<span class="sem-ean-tag">sem EAN</span>':r.ean}</td><td>${r.nome||'—'}</td><td><b>${r.qtdAcum}</b></td><td style="font-size:11px">${[...new Set(r.validades)].join(', ')||'—'}</td><td style="font-size:11px">${new Date(r.ts).toLocaleDateString('pt-BR')}</td></tr>`).join('')}</tbody></table>`:'<div class="text-muted">Nenhum dado.</div>';
+}
+async function exportarConsolidadoCSV(){
+  const rows=await getConsolidadoData();if(!rows.length){alert('Sem dados.');return;}
+  downloadCSV('cod,qtd,data\n'+rows.map(r=>`${r.semEan?'':r.ean},${r.qtdAcum},${new Date(r.ts).toLocaleDateString('pt-BR')}`).join('\n'),'estoque_'+fmtDate(new Date()));
+}
+async function exportarValidadeCSV(){
+  const rows=await getConsolidadoData();if(!rows.length){alert('Sem dados.');return;}
+  let csv='nome,ean,validade,qtd\n';
+  rows.forEach(r=>{const v=[...new Set(r.validades)];const e=r.semEan?'':r.ean;(v.length?v:['N/A']).forEach(x=>{csv+=`"${r.nome||''}",${e},${x},${r.qtdAcum}\n`;});});
+  downloadCSV(csv,'validades_'+fmtDate(new Date()));
+}
+async function exportarCSVContagem(){
+  if(!contagemDetalheId)return;const itens=await dbGetByIndex('itens','contagemId',contagemDetalheId);
+  const g={};itens.forEach(i=>{if(!g[i.ean])g[i.ean]={...i,qtd:0};g[i.ean].qtd+=i.qtd;});
+  downloadCSV('cod,qtd,data\n'+Object.values(g).map(r=>`${r.semEan?'':r.ean},${r.qtd},${new Date(r.ts).toLocaleDateString('pt-BR')}`).join('\n'),'estoque_'+fmtDate(new Date()));
+}
+async function exportarCSVValidade(){
+  if(!contagemDetalheId)return;const itens=await dbGetByIndex('itens','contagemId',contagemDetalheId);
+  const g={};itens.forEach(i=>{if(!g[i.ean])g[i.ean]={...i,qtd:0,validades:[]};g[i.ean].qtd+=i.qtd;if(i.validade)g[i.ean].validades.push(i.validade);});
+  let csv='nome,ean,validade,qtd\n';
+  Object.values(g).forEach(r=>{const v=[...new Set(r.validades)];const e=r.semEan?'':r.ean;(v.length?v:['N/A']).forEach(x=>{csv+=`"${r.nome||''}",${e},${x},${r.qtd}\n`;});});
+  downloadCSV(csv,'validades_'+fmtDate(new Date()));
+}
+
+async function renderProdutos(){
+  const prods=await dbGetAll('produtos');
+  const q=(document.getElementById('prod-search')?.value||'').toLowerCase();
+  const f=prods.filter(p=>!q||(p.ean+p.nome+(p.idExterno||'')).toLowerCase().includes(q));
+  document.getElementById('prod-count').textContent=prods.length;
+  document.getElementById('produtos-lista').innerHTML=f.length?`<table class="tbl"><thead><tr><th>EAN</th><th>Nome</th><th>ID Ext.</th><th>Qtd</th><th></th></tr></thead><tbody>${f.map(p=>`<tr><td style="font-size:11px">${p.ean.startsWith('SEM-EAN-')?'<span class="sem-ean-tag">sem EAN</span>':p.ean}</td><td>${p.nome}</td><td>${p.idExterno||'—'}</td><td>${p.qtdRef||0}</td><td><button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="deletarProduto('${p.ean}')">✕</button></td></tr>`).join('')}</tbody></table>`:'<div class="text-muted" style="padding:1rem">Nenhum produto.</div>';
+}
+async function salvarProduto(){
+  const eanInput=document.getElementById('prod-ean').value.trim();
+  const nome=document.getElementById('prod-nome').value.trim();
+  if(!nome){showAlert('prod-alert','Preencha o Nome.','error');return;}
+  const ean=eanInput||gerarEanInterno(nome);
+  await dbPut('produtos',{ean,nome,idExterno:document.getElementById('prod-id').value.trim(),qtdRef:parseInt(document.getElementById('prod-qtd').value)||0});
+  ['prod-ean','prod-nome','prod-id','prod-qtd'].forEach(id=>document.getElementById(id).value='');
+  showAlert('prod-alert','Produto salvo!'+(eanInput?'':' (EAN interno gerado)'),'success');renderProdutos();
+}
+async function deletarProduto(ean){if(!confirm('Remover?'))return;await dbDelete('produtos',ean);renderProdutos();}
+
+let csvData=[];
+function previewCSV(){
+  const file=document.getElementById('csv-file').files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const lines=e.target.result.trim().split('\n');if(!lines.length)return;
+    const h=lines[0].split(',').map(x=>x.trim().toLowerCase().replace(/"/g,''));
+    const[ei,ni,ii,qi]=[h.indexOf('ean'),h.indexOf('nome'),h.indexOf('id'),h.indexOf('qtd')];
+    if(ni<0){showAlert('csv-alert','CSV precisa da coluna "nome".','error');return;}
+    csvData=[];
+    for(let i=1;i<lines.length;i++){
+      const c=lines[i].split(',').map(x=>x.trim().replace(/"/g,''));
+      const nome=c[ni]||'';if(!nome)continue;
+      csvData.push({ean:(ei>=0&&c[ei])?c[ei]:gerarEanInterno(nome),nome,idExterno:ii>=0?c[ii]||'':'',qtdRef:qi>=0?parseInt(c[qi])||0:0});
+    }
+    document.getElementById('csv-preview').innerHTML=`<div class="alert alert-info">${csvData.length} produto(s) encontrado(s).</div><table class="tbl"><thead><tr><th>EAN</th><th>Nome</th></tr></thead><tbody>${csvData.slice(0,5).map(r=>`<tr><td style="font-size:11px">${r.ean.startsWith('SEM-EAN-')?'<span class="sem-ean-tag">sem EAN</span>':r.ean}</td><td>${r.nome}</td></tr>`).join('')}</tbody></table>${csvData.length>5?`<div class="text-muted" style="padding:.5rem">...e mais ${csvData.length-5}</div>`:''}`;
+    document.getElementById('csv-import-btn-wrap').style.display='block';
+  };
+  reader.readAsText(file,'UTF-8');
+}
+async function importarCSV(){
+  for(const p of csvData)await dbPut('produtos',p);
+  showAlert('csv-alert',`${csvData.length} produto(s) importados!`,'success');
+  csvData=[];document.getElementById('csv-file').value='';document.getElementById('csv-preview').innerHTML='';document.getElementById('csv-import-btn-wrap').style.display='none';
+}
+
+function showAlert(id,msg,type){const el=document.getElementById(id);el.innerHTML=`<div class="alert alert-${type}">${msg}</div>`;setTimeout(()=>el.innerHTML='',4000);}
+const fmtDate=d=>d.toISOString().slice(0,10);
+function downloadCSV(content,filename){
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+content],{type:'text/csv;charset=utf-8;'}));a.download=filename+'.csv';a.click();
+}
+
+initDB().then(renderHome);
+</script>
+</body>
+</html>
