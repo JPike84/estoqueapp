@@ -835,40 +835,42 @@ async function importarCSV(){
   if(!csvData.length)return;
   const btn=document.getElementById('csv-import-btn');
   btn.disabled=true;
-
-  // deduplica por EAN — mantém o último registro de cada EAN
+  // deduplica por EAN
   const dedup={};
-  csvData.forEach(p=>{dedup[p.ean]=p;});
+  csvData.forEach(p=>{if(p.ean&&p.nome)dedup[p.ean]=p;});
   const dados=Object.values(dedup);
   const total=dados.length;
   let ok=0,erros=0;
-  const BATCH=200;
+  const BATCH=50;
+  const pause=ms=>new Promise(r=>setTimeout(r,ms));
   setSyncStatus('syncing',`Importando 0/${total}...`);
-
   for(let i=0;i<dados.length;i+=BATCH){
     const lote=dados.slice(i,i+BATCH);
-    // garante que não há ean vazio ou nome vazio no lote
-    const loteOk=lote.filter(p=>p.ean&&p.nome);
-    try{
-      const{error}=await sb.from('produtos').upsert(loteOk,{onConflict:'ean',ignoreDuplicates:false});
-      if(error){
-        // tenta um a um se o lote falhar
-        for(const p of loteOk){
-          const{error:e2}=await sb.from('produtos').upsert(p,{onConflict:'ean'});
-          if(e2)erros++;else ok++;
-        }
-      }else{ok+=loteOk.length;}
-    }catch(e){erros+=loteOk.length;}
-    const prog=Math.min(i+BATCH,total);
-    setSyncStatus('syncing',`Importando ${prog}/${total}...`);
-    btn.innerHTML=`<span class="loading"></span>${prog}/${total}`;
+    let sucesso=false;
+    for(let tentativa=0;tentativa<3&&!sucesso;tentativa++){
+      try{
+        const{error}=await sb.from('produtos').upsert(lote,{onConflict:'ean'});
+        if(!error){ok+=lote.length;sucesso=true;}
+        else await pause(300*(tentativa+1));
+      }catch(e){await pause(300*(tentativa+1));}
+    }
+    if(!sucesso){
+      // fallback: um a um
+      for(const p of lote){
+        try{const{error}=await sb.from('produtos').upsert(p,{onConflict:'ean'});if(error)erros++;else ok++;}
+        catch(e){erros++;}
+        await pause(50);
+      }
+    }
+    setSyncStatus('syncing',`Importando ${ok}/${total}...`);
+    btn.innerHTML=`<span class="loading"></span>${ok}/${total}`;
+    await pause(150);
   }
-
   setSyncStatus('ok','Conectado');
   btn.disabled=false;btn.innerHTML='📥 Importar';
   produtosCache=[];
-  if(erros)showAlert('csv-alert',`${ok} importados com sucesso, ${erros} com erro.`,'warn');
-  else showAlert('csv-alert',`${ok} produto(s) importados com sucesso!`,'success');
+  if(erros)showAlert('csv-alert',`${ok} importados, ${erros} com erro.`,'warn');
+  else showAlert('csv-alert',`✓ ${ok} produto(s) importados com sucesso!`,'success');
   csvData=[];document.getElementById('csv-file').value='';document.getElementById('csv-preview').innerHTML='';document.getElementById('csv-import-btn-wrap').style.display='none';
 }
 
