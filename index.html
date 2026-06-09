@@ -356,6 +356,35 @@
   </div>
 </div>
 
+<!-- MODAL EDITAR ITEM -->
+<div class="modal-bg" id="modal-editar-item">
+  <div class="modal">
+    <h3>Editar Item</h3>
+    <div id="edit-item-info"></div>
+    <div class="form-group">
+      <label>Quantidade</label>
+      <input type="number" id="edit-qtd" min="1" onkeydown="if(event.key==='Enter')salvarEdicaoItem()">
+    </div>
+    <hr class="divider">
+    <div style="margin-bottom:.5rem;font-size:13px;font-weight:500">Data de Validade</div>
+    <div class="checkbox-row" style="margin-bottom:.75rem">
+      <input type="checkbox" id="edit-nao-relevante" onchange="toggleEditValidade()">
+      <label for="edit-nao-relevante">Não relevante (sem data de validade)</label>
+    </div>
+    <div id="edit-validade-field" class="form-group">
+      <label>Data de Validade (dd/mm/aaaa)</label>
+      <input type="text" id="edit-validade" placeholder="31/12/2025" maxlength="10" oninput="formatarData(this)">
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:1rem">
+      <button class="btn btn-danger" onclick="deletarItem()">🗑 Deletar</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="fecharModal('modal-editar-item')">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarEdicaoItem()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ===== SUPABASE =====
 const SUPA_URL='https://vmewhzvioaumgcosxxcc.supabase.co';
@@ -533,9 +562,40 @@ async function abrirScanner(){
   scannerActive=true;
   try{
     scannerStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}});
-    document.getElementById('scanner-video').srcObject=scannerStream;
-    await document.getElementById('scanner-video').play();
-    document.getElementById('scan-status').textContent='Aponte para o código de barras';
+    const video=document.getElementById('scanner-video');
+    video.srcObject=scannerStream;
+    await video.play();
+
+    // ativa foco contínuo via applyConstraints
+    try{
+      const track=scannerStream.getVideoTracks()[0];
+      const caps=track.getCapabilities&&track.getCapabilities()||{};
+      const adv={};
+      if(caps.focusMode&&caps.focusMode.includes('continuous'))adv.focusMode='continuous';
+      if(caps.exposureMode&&caps.exposureMode.includes('continuous'))adv.exposureMode='continuous';
+      if(caps.whiteBalanceMode&&caps.whiteBalanceMode.includes('continuous'))adv.whiteBalanceMode='continuous';
+      if(Object.keys(adv).length)await track.applyConstraints({advanced:[adv]});
+    }catch(e){/* ignora se câmera não suportar */}
+
+    // toque na tela força foco no ponto tocado
+    video.addEventListener('click',async(e)=>{
+      try{
+        const track=scannerStream&&scannerStream.getVideoTracks()[0];
+        if(!track)return;
+        const caps=track.getCapabilities&&track.getCapabilities()||{};
+        if(caps.focusMode&&caps.focusMode.includes('manual')){
+          const rect=video.getBoundingClientRect();
+          const x=(e.clientX-rect.left)/rect.width;
+          const y=(e.clientY-rect.top)/rect.height;
+          await track.applyConstraints({advanced:[{focusMode:'manual',focusDistance:0}]});
+          setTimeout(async()=>{
+            try{await track.applyConstraints({advanced:[{focusMode:'continuous'}]});}catch(e){}
+          },800);
+        }
+      }catch(e){}
+    });
+
+    document.getElementById('scan-status').textContent='Aponte para o código · toque na tela para focar';
     if('BarcodeDetector' in window){
       const formats=await BarcodeDetector.getSupportedFormats();
       const detector=new BarcodeDetector({formats});
@@ -703,16 +763,80 @@ async function renderHistorico(){
 async function abrirDetalhe(id){
   contagemDetalheId=id;
   const[c,itens]=await Promise.all([sbGet('contagens','id',id),sbGetByFK('itens','contagem_id',id)]);
+  const ativa=c.status==='ativa';
   document.getElementById('detalhe-title').textContent=c.descricao;
-  const g={};
-  itens.forEach(i=>{if(!g[i.ean])g[i.ean]={ean:i.ean,nome:i.nome,qtd:0,validades:[],sem_ean:i.sem_ean};g[i.ean].qtd+=i.qtd;if(i.validade)g[i.ean].validades.push(i.validade);});
-  const rows=Object.values(g);
+
+  // mostra itens individuais (não agrupados) para permitir edição
+  const rows=itens;
   document.getElementById('detalhe-content').innerHTML=`
-    <div class="text-muted" style="margin-bottom:.75rem">Início: ${new Date(c.inicio).toLocaleString('pt-BR')}${c.fim?' · Fim: '+new Date(c.fim).toLocaleString('pt-BR'):''}</div>
-    ${rows.length?`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>EAN</th><th>Nome</th><th>Qtd</th><th>Validade(s)</th></tr></thead><tbody>
-    ${rows.map(r=>`<tr><td style="font-size:11px">${r.sem_ean?'<span class="sem-ean-tag">sem EAN</span>':r.ean}</td><td>${r.nome||'—'}</td><td><b>${r.qtd}</b></td><td style="font-size:11px">${[...new Set(r.validades)].join('<br>')||'—'}</td></tr>`).join('')}
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:.75rem">
+      <div class="text-muted">Início: ${new Date(c.inicio).toLocaleString('pt-BR')}${c.fim?' · Fim: '+new Date(c.fim).toLocaleString('pt-BR'):''}</div>
+      ${ativa?`<button class="btn btn-danger" style="font-size:12px;padding:6px 14px" onclick="encerrarContagemDetalhe(${id})">✓ Encerrar Contagem</button>`:''}
+    </div>
+    ${rows.length?`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>EAN</th><th>Nome</th><th>Qtd</th><th>Validade</th>${ativa?'<th></th>':''}</tr></thead><tbody>
+    ${rows.map(r=>`<tr>
+      <td style="font-size:11px">${r.sem_ean?'<span class="sem-ean-tag">sem EAN</span>':r.ean}</td>
+      <td>${r.nome||'—'}</td>
+      <td><b>${r.qtd}</b></td>
+      <td style="font-size:11px">${r.validade||'—'}</td>
+      ${ativa?`<td><button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="abrirEditarItem(${r.id},'${(r.ean||'').replace(/'/g,"\\'")}','${(r.nome||'').replace(/'/g,"\\'")}',${r.qtd},'${r.validade||''}',${r.sem_ean})">✏️</button></td>`:''}
+    </tr>`).join('')}
     </tbody></table></div>`:'<div class="text-muted">Nenhum item.</div>'}`;
   document.getElementById('modal-detalhe').classList.add('open');
+}
+
+async function encerrarContagemDetalhe(id){
+  if(!confirm('Encerrar esta contagem?'))return;
+  await sbUpdate('contagens','id',id,{fim:new Date().toISOString(),status:'encerrada'});
+  if(currentContagemId===id)currentContagemId=null;
+  fecharModal('modal-detalhe');
+  renderHistorico();
+}
+
+let itemEditandoId=null;
+function abrirEditarItem(id,ean,nome,qtd,validade,semEan){
+  itemEditandoId=id;
+  document.getElementById('edit-item-info').innerHTML=`
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 14px;margin-bottom:.75rem">
+      ${semEan?'<span class="sem-ean-tag">sem EAN</span>':`<div style="font-size:13px;font-family:monospace;color:var(--accent)">${ean}</div>`}
+      <div style="font-size:13px;font-weight:500;margin-top:2px">${nome||'—'}</div>
+    </div>`;
+  document.getElementById('edit-qtd').value=qtd;
+  const naoRel=validade==='N/A'||!validade;
+  document.getElementById('edit-nao-relevante').checked=naoRel;
+  document.getElementById('edit-validade').value=naoRel?'':validade;
+  document.getElementById('edit-validade-field').style.display=naoRel?'none':'block';
+  document.getElementById('modal-editar-item').classList.add('open');
+  setTimeout(()=>document.getElementById('edit-qtd').focus(),150);
+}
+
+function toggleEditValidade(){
+  document.getElementById('edit-validade-field').style.display=document.getElementById('edit-nao-relevante').checked?'none':'block';
+}
+
+async function salvarEdicaoItem(){
+  const qtd=parseInt(document.getElementById('edit-qtd').value);
+  if(!document.getElementById('edit-qtd').value.trim()||isNaN(qtd)||qtd<=0){alert('Insira a quantidade.');return;}
+  const naoRel=document.getElementById('edit-nao-relevante').checked;
+  let validade='';
+  if(!naoRel){
+    validade=document.getElementById('edit-validade').value.trim();
+    if(!validade||validade.length<10){alert('Insira a data de validade ou marque "Não relevante".');return;}
+  } else validade='N/A';
+  try{
+    await sbUpdate('itens','id',itemEditandoId,{qtd,validade});
+    fecharModal('modal-editar-item');
+    await abrirDetalhe(contagemDetalheId);
+  }catch(e){alert('Erro ao salvar: '+e.message);}
+}
+
+async function deletarItem(){
+  if(!confirm('Remover este item da contagem?'))return;
+  try{
+    await sbDelete('itens','id',itemEditandoId);
+    fecharModal('modal-editar-item');
+    await abrirDetalhe(contagemDetalheId);
+  }catch(e){alert('Erro ao deletar: '+e.message);}
 }
 
 // ===== RELATÓRIOS =====
